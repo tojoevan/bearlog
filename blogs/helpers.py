@@ -65,7 +65,10 @@ def is_protected(subdomain):
         'www.bearblog.dev',
         '_dmarc',
         'domain-proxy',
-        'themes'
+        'themes',
+        'kapibala',
+        'kapibala.icu', 
+        '*.kapibala.icu'
     ]
 
     return subdomain in protected_subdomains

@@ -149,14 +149,14 @@ def feed(request):
     if feed_kind == 'newest':
         fg.title("Bear Blog Most Recent Posts")
         fg.subtitle("Most recent posts on Bear Blog")
-        fg.link(href="https://bearblog.dev/discover/?newest=True", rel="alternate")
+        fg.link(href="https://kapibala.icu/discover/?newest=True", rel="alternate")
         # Sort by published date
         all_posts = base_query.order_by("-published_date")[:posts_per_page]
         
     else:
         fg.title("Bear Blog Trending Posts")
         fg.subtitle("Trending posts on Bear Blog")
-        fg.link(href="https://bearblog.dev/discover/", rel="alternate")
+        fg.link(href="https://kapibala.icu/discover/", rel="alternate")
         # Sort by score and then by published date
         all_posts = base_query.order_by("-score", "-published_date")[:posts_per_page]
 

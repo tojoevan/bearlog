@@ -236,7 +236,7 @@ class ConditionalXFrameOptionsMiddleware:
     def __call__(self, request):
         response = self.get_response(request)
         host = request.get_host().lower()
-        main_domains = {'bearblog.dev', 'www.bearblog.dev', 'lh.co'}
+        main_domains = {'kapibala.icu', 'www.kapibala.icu'}
         
         if host in main_domains:
             response['X-Frame-Options'] = 'DENY'
