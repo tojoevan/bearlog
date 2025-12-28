@@ -14,6 +14,22 @@ import os
 
 posts_per_page = 20
 
+def resolve_address(request):
+    http_host = request.get_host()
+
+    sites = os.getenv('MAIN_SITE_HOSTS').split(',')
+
+    if any(http_host == site for site in sites):
+        # Homepage
+        return None
+    elif any(site in http_host for site in sites):
+        # Subdomained blog
+        subdomain = tldextract.extract(http_host).subdomain.lower()
+
+        return get_object_or_404(Blog.objects.select_related('user').select_related('user__settings'), subdomain=subdomain, user__is_active=True)
+    else:
+        # Custom domain blog
+        return get_blog_with_domain(http_host)
 
 def get_base_query(user=None):
     queryset = Post.objects.select_related("blog").filter(
@@ -68,11 +84,31 @@ def admin_actions(request):
 def discover(request):
     admin_actions(request)
 
+    blog = resolve_address(request)
+    if blog:
+        all_posts = blog.posts.filter(publish=True, published_date__lte=timezone.now(), is_page=False).order_by('-published_date')
+        meta_description = blog.meta_description or unmark(blog.content)[:157] + '...'
+    
+        response = render(
+            request,
+            'home.html',
+            {
+                'blog': blog,
+                'posts': all_posts,
+                'meta_description': meta_description
+            }
+        )
+
+        response['Cache-Tag'] = blog.subdomain
+        response['Cache-Control'] = "public, s-maxage=43200, max-age=0"
+
+        return response
+
     try:
         page = int(request.GET.get("page", 0) or 0)
     except ValueError:
         page = 0
-    
+
     posts_from = page * posts_per_page
     posts_to = (page * posts_per_page) + posts_per_page
 
