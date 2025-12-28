@@ -108,7 +108,7 @@ def discover(request):
 
     posts = posts[posts_from:posts_to]
 
-    return render(request, "discover.html", {
+    return render(request, "index.html", {
         "lang": lang,
         "available_languages": get_available_languages(),
         "posts": posts,

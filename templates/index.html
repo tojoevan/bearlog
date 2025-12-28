@@ -1,0 +1,191 @@
+{% extends 'base.html' %}
+
+{% block title %}{% if newest %}Most recent{% else %}Trending{% endif %} | Kapibala Blog{% endblock %}
+
+{% block seo %}
+<meta name="robots" content="nofollow">
+{% include 'snippets/seo_tags.html' with site_name='ʕ•ᴥ•ʔ Kapibala Blog' type="website" title='Discovery feed' url='https://kapibala.icu/discover' description='Discover articles and blogs on Kapibala' image="https://bear-images.sfo2.cdn.digitaloceanspaces.com/herman-1683556668-0.png" %}
+<link rel="alternate" type="application/atom+xml" href="/feed/{% if newest %}?newest=True{% endif %}" title="{% if newest %}Most recent{% else %}Trending{% endif %} | Kapibala Blog">
+<link rel="alternate" type="application/rss+xml" href="feed/?type=rss{% if newest %}&newest=True{% endif %}" title="{% if newest %}Most recent{% else %}Trending{% endif %} | Kapibala Blog">
+{% endblock %}
+
+{% block nav %}
+{% endblock %}
+
+{% block page_type %}discover{% endblock %}
+
+{% block content %}
+
+<h1>
+    Discovery feed
+</h1>
+
+<nav>
+    {% if not newest %}
+    <b><a href="/discover/">Trending</a></b>
+    <a href="/discover/?newest=true">Most recent</a>
+    {% else %}
+    <a href="/discover/">Trending</a>
+    <b><a href="/discover/?newest=true">Most recent</a></b>
+    {% endif %}
+    <a href="/discover/search/">Search</a>
+</nav>
+
+<p>
+    <details style="font-size: small; color: grey;">
+        <summary>
+            Filters:  Language ({% if lang %}{{ lang }}{% else %}None{% endif %})  Hidden ({{ hide_list_cookie|length }})
+        </summary>
+        <hr>
+        Language:
+        <br>
+        <a href="{{ request.path }}" onclick="document.cookie='lang=; path=/discover/; expires=Fri, 31 Dec 9999 23:59:59 GMT';">None</a>
+        {% for language in available_languages %}
+        {% if language %}
+        <a href="{{ request.path }}" onclick="document.cookie='lang={{ language }}; path=/discover/; expires=Fri, 31 Dec 9999 23:59:59 GMT';">{{ language }}</a>
+        {% endif %}
+        {% endfor %}
+    
+        <br><br>
+        Hidden blogs:
+        <br>
+        <textarea id="hidden-blogs" style="width: calc(100% - 20px); height: 100px; padding: 10px;">{% for domain in hide_list_cookie %}{{ domain }}
+{% endfor %}</textarea>
+        <br>
+        
+        <button onclick="document.cookie='hide_list=' + document.getElementById('hidden-blogs').value.split('\n').join(',') + '; path=/discover/; expires=Fri, 31 Dec 9999 23:59:59 GMT'; location.reload();">Save</button>
+        <br>
+        Not everyone likes everything. Some people like programming posts, others like slices of life.
+        <br>
+        Hide blogs from your discovery feed by adding their domains above.
+        <br>
+        In order to keep the discovery feed account-agnostic, these settings are saved in your browser's cookies.
+        <br>
+        If a blog is particularly inappropriate, please report it to Herman.
+        <hr>
+    </details>
+</p>
+
+{% if newest and request.user.is_authenticated %}
+<p>
+    <small><i><a target="_blank" href="https://docs.bearblog.dev/not-seeing-your-post/">Not seeing your post?</a></i></small>
+</p>
+{% endif %}
+<ul class="discover-posts">
+    {% for post in posts %}
+    <li>
+        <span>
+            #{{ forloop.counter|add:posts_from }}
+        </span>
+        <div>
+            <a href="{{ post.blog.dynamic_useful_domain }}/{{ post.slug }}">
+                {{ post.title }}
+            </a>
+            <small>
+                <span>(<a href="{{ post.blog.dynamic_useful_domain }}">{{ post.blog.useful_domain }}</a>)</span>
+                <br>
+                <small title="{{ post.published_date|date:'Y-m-d\TH:i\Z' }}">Published {{ post.published_date|timesince }} ago</small>
+                <small>
+                    <svg style="height:16px;margin: 0 -8px -4px 0;" viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" class="css-i6dzq1"><polyline points="17 11 12 6 7 11"></polyline><polyline points="17 18 12 13 7 18"></polyline></svg>
+                    {{ post.upvotes }}
+                </small>
+                {% comment %} <small>
+                    {% for tag in post.tags|slice:":3" %}
+                    <span style="background-color: #f0f0f0; padding: 2px 4px; border-radius: 4px; margin-right: 4px;">
+                        #{{ tag }}
+                    </span>
+                    {% endfor %}
+                </small> {% endcomment %}
+                {% if request.user.is_staff %}
+                    <details>
+                        <summary style="font-size: 0.7rem;">{% if post.blog.user.settings.upgraded %}🐻{% else %}🌱{% endif %} {{ post.blog.lang }} {{ post.lang }}</summary>
+                        <form method="POST" style="display:inline">
+                            <input hidden name="hide-post" value="{{ post.pk }}">
+                            <button onclick="event.preventDefault();if(confirm('Hide this post?')){event.target.parentElement.submit()}">Hide post</button>
+                        </form>
+                        <form method="POST" style="display:inline">
+                            <input hidden name="hide-blog" value="{{ post.pk }}">
+                            <button onclick="event.preventDefault();if(confirm('Hide this blog?')){event.target.parentElement.submit()}">Hide blog</button>
+                        </form>
+
+                        <form method="POST" style="display:inline">
+                            <input hidden name="block-blog" value="{{ post.pk }}">
+                            <button onclick="event.preventDefault();if(confirm('Block this blog?')){event.target.parentElement.submit()}">Block blog</button>
+                        </form>
+
+                        <form method="POST" style="display:inline">
+                            <span>Shadow votes/lang:</span>
+                            <input hidden name="set-values" value="{{ post.pk }}">
+                            <input type="number" name="shadow-votes" value="{{ post.shadow_votes }}" style="width:45px; padding: 0;">
+                            <input type="text" name="lang" value="{% if post.lang %}{{ post.lang }}{% else %}{{ post.blog.lang }}{% endif %}" style="width:45px; padding: 0;">
+                            <button>Set</button>
+                        </form>
+                        <br><br>
+                        Admin:
+                        <a href="/mothership/blogs/blog/{{ post.blog.id }}/change/" target="_blank">Blog</a>
+                        | <a href="/mothership/blogs/post/{{ post.id }}/change/" target="_blank">Post</a>
+                        | <a href="/mothership/blogs/usersettings/{{ post.blog.user.settings.id }}/change/" target="_blank">User</a>
+                        <hr>
+                    </details>
+                {% endif %}
+            </small>
+        </div>
+    </li>
+    {% empty %}
+    <li>
+        We've run out of posts ʕノ•ᴥ•ʔノ ︵ ┻━┻
+    </li>
+    {% endfor %}
+</ul>
+
+<p>
+    {% if previous_page >= 0 %}
+    <a href="?page={{ previous_page }}{% if newest %}&newest=true{% endif %}">&laquo; Previous</a> |
+    {% endif %}
+    {% if posts %}
+    <a href="?page={{ next_page }}{% if newest %}&newest=true{% endif %}">Next &raquo;</a>
+    {% endif %}
+</p>
+<p>
+    <i>
+        Subscribe to the
+        {% if newest %}
+        <a
+            href="feed/?newest=True{% if lang %}&lang={{ lang }}{% endif %}"
+            title="https://kapibala.icu/discover/feed/?newest=True{% if lang %}&lang={{ lang }}{% endif %}"
+        >RSS feed</a>
+        {% else %}
+        <a 
+            href="feed/{% if lang %}?lang={{ lang }}{% endif %}" 
+            title="https://kapibala.icu/discover/feed/{% if lang %}?lang={{ lang }}{% endif %}"
+        >RSS feed</a>
+        {% endif %}
+    </i>
+</p>
+{% if not True %}
+<p>
+    <small>
+        <pre class="code">
+
+This page is ranked according to the following algorithm:
+Score = log10(U) + (S / (B * 86,400))
+
+Where,
+U = Upvotes of a post
+S = Seconds since Jan 1st, 2020
+B = Buoyancy modifier (currently at 14)
+
+--
+B values is used to modify the effect of time on the score. A lower B causes posts to sink faster with time.
+        </pre>
+    </small>
+</p>
+{% endif %}
+{% endblock %}
+
+{% block footer %}
+
+<p>
+    Start your own blog with <a href="/accounts/signup/">Kapibala</a> <span class="bear" role="img" aria-label="ASCII Kapibala logo">ʕ•ᴥ•ʔﾉ</span>
+</p>
+{% endblock %}
