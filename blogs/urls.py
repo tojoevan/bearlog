@@ -21,7 +21,7 @@ def main_site_only(view_func):
 urlpatterns = [
     path('', discover.discover, name='discover'),
     # path('', blog.home, name='home'),
-    path('home', blog.home, name='home'),
+    path('home/', blog.home, name='home'),
     path('logger-test/', logger.logger_test),
     path('timeout-test/', logger.timout_test),
 
