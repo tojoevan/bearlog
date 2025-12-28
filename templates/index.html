@@ -22,11 +22,11 @@
 
 <nav>
     {% if not newest %}
-    <b><a href="/discover/">热榜</a></b>
-    <a href="/discover/?newest=true">最新</a>
+    <b><a href="/">热榜</a></b>
+    <a href="/?newest=true">最新</a>
     {% else %}
-    <a href="/discover/">热榜</a>
-    <b><a href="/discover/?newest=true">最新</a></b>
+    <a href="/">热榜</a>
+    <b><a href="/?newest=true">最新</a></b>
     {% endif %}
     <a href="/discover/search/">搜索</a>
 </nav>
@@ -39,10 +39,10 @@
         <hr>
         Language:
         <br>
-        <a href="{{ request.path }}" onclick="document.cookie='lang=; path=/discover/; expires=Fri, 31 Dec 9999 23:59:59 GMT';">None</a>
+        <a href="{{ request.path }}" onclick="document.cookie='lang=; path=/; expires=Fri, 31 Dec 9999 23:59:59 GMT';">None</a>
         {% for language in available_languages %}
         {% if language %}
-        <a href="{{ request.path }}" onclick="document.cookie='lang={{ language }}; path=/discover/; expires=Fri, 31 Dec 9999 23:59:59 GMT';">{{ language }}</a>
+        <a href="{{ request.path }}" onclick="document.cookie='lang={{ language }}; path=/; expires=Fri, 31 Dec 9999 23:59:59 GMT';">{{ language }}</a>
         {% endif %}
         {% endfor %}
     
