@@ -19,7 +19,7 @@ def main_site_only(view_func):
     return _wrapped_view
 
 urlpatterns = [
-    path('', main_site_only(discover.discover), name='discover'),
+    path('', discover.discover, name='discover'),
     # path('', blog.home, name='home'),
     path('home', blog.home, name='home'),
     path('logger-test/', logger.logger_test),
