@@ -4,7 +4,7 @@
 
 {% block seo %}
 <meta name="robots" content="nofollow">
-{% include 'snippets/seo_tags.html' with site_name='ʕ•ᴥ•ʔ Kapibala Blog' type="website" title='Discovery feed' url='https://kapibala.icu/discover' description='Discover articles and blogs on Kapibala' image="https://bear-images.sfo2.cdn.digitaloceanspaces.com/herman-1683556668-0.png" %}
+{% include 'snippets/seo_tags.html' with site_name='ʕ•ᴥ•ʔ Kapibala Blog' type="website" title='发现精彩' url='https://kapibala.icu/' description='Discover articles and blogs on Kapibala' image="https://bear-images.sfo2.cdn.digitaloceanspaces.com/herman-1683556668-0.png" %}
 <link rel="alternate" type="application/atom+xml" href="/feed/{% if newest %}?newest=True{% endif %}" title="{% if newest %}Most recent{% else %}Trending{% endif %} | Kapibala Blog">
 <link rel="alternate" type="application/rss+xml" href="feed/?type=rss{% if newest %}&newest=True{% endif %}" title="{% if newest %}Most recent{% else %}Trending{% endif %} | Kapibala Blog">
 {% endblock %}
@@ -17,18 +17,18 @@
 {% block content %}
 
 <h1>
-    Discovery feed
+    发现精彩
 </h1>
 
 <nav>
     {% if not newest %}
-    <b><a href="/discover/">Trending</a></b>
-    <a href="/discover/?newest=true">Most recent</a>
+    <b><a href="/discover/">热榜</a></b>
+    <a href="/discover/?newest=true">最新</a>
     {% else %}
-    <a href="/discover/">Trending</a>
-    <b><a href="/discover/?newest=true">Most recent</a></b>
+    <a href="/discover/">热榜</a>
+    <b><a href="/discover/?newest=true">最新</a></b>
     {% endif %}
-    <a href="/discover/search/">Search</a>
+    <a href="/discover/search/">搜索</a>
 </nav>
 
 <p>
@@ -140,15 +140,15 @@
 
 <p>
     {% if previous_page >= 0 %}
-    <a href="?page={{ previous_page }}{% if newest %}&newest=true{% endif %}">&laquo; Previous</a> |
+    <a href="?page={{ previous_page }}{% if newest %}&newest=true{% endif %}">&laquo; 前</a> |
     {% endif %}
     {% if posts %}
-    <a href="?page={{ next_page }}{% if newest %}&newest=true{% endif %}">Next &raquo;</a>
+    <a href="?page={{ next_page }}{% if newest %}&newest=true{% endif %}">后 &raquo;</a>
     {% endif %}
 </p>
 <p>
     <i>
-        Subscribe to the
+        订阅
         {% if newest %}
         <a
             href="feed/?newest=True{% if lang %}&lang={{ lang }}{% endif %}"
@@ -186,6 +186,6 @@ B values is used to modify the effect of time on the score. A lower B causes pos
 {% block footer %}
 
 <p>
-    Start your own blog with <a href="/accounts/signup/">Kapibala</a> <span class="bear" role="img" aria-label="ASCII Kapibala logo">ʕ•ᴥ•ʔﾉ</span>
+    在 <a href="/accounts/signup/">Kapibala</a> <span class="bear" role="img" aria-label="ASCII Kapibala logo">ʕ•ᴥ•ʔﾉ</span>，安静的写作。
 </p>
 {% endblock %}
