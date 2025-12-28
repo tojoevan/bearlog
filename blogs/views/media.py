@@ -143,7 +143,7 @@ def upload_files(blog, file_list, optimise=True):
         file_name = new_file_name
         
         filepath = f'{blog.subdomain}/{file_name}.{extension}'
-        url = f'https://{bucket_name}.sfo2.cdn.digitaloceanspaces.com/{filepath}'
+        url = f'https://pub-d3cdb3e12f644a39ae6f21c50fed1f89.r2.dev/{filepath}'
         file_links.append(url)
 
         # Create Media object first
@@ -271,7 +271,7 @@ def get_uploaded_images(blog):
         return []
 
     image_urls = [
-        f'https://{bucket_name}.sfo2.cdn.digitaloceanspaces.com/{item["Key"]}'
+        f'https://pub-d3cdb3e12f644a39ae6f21c50fed1f89.r2.dev/{item["Key"]}'
         for item in response['Contents']
         if item['Key'].split('.')[-1].lower() in file_types
     ]
@@ -301,7 +301,7 @@ def delete_selected_media(request, id):
         for url in selected_media:
             print(url)
             if Media.objects.filter(blog=blog, url=url).exists():
-                key = url.replace(f'https://{bucket_name}.sfo2.cdn.digitaloceanspaces.com/', '')
+                key = url.replace(f'https://pub-d3cdb3e12f644a39ae6f21c50fed1f89.r2.dev/', '')
                 print(f"Deleting key: {key}")
                 response = client.delete_object(Bucket=bucket_name, Key=key)
                 # print("S3 Response:", response)
@@ -316,7 +316,7 @@ def delete_selected_media(request, id):
 
 def image_proxy(request, img):
     # Construct the DigitalOcean Spaces URL
-    remote_url = f'https://{bucket_name}.sfo2.cdn.digitaloceanspaces.com/{img}'
+    remote_url = f'https://pub-d3cdb3e12f644a39ae6f21c50fed1f89.r2.dev/{img}'
     
     # Stream the content from the remote URL
     response = requests.get(remote_url, stream=True, timeout=10)
