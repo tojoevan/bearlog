@@ -20,6 +20,7 @@ def main_site_only(view_func):
 
 urlpatterns = [
     # path('', blog.home, name='home'),
+    path('home', blog.home, name='home'),
     path('', main_site_only(discover.discover), name='discover'),
     path('logger-test/', logger.logger_test),
     path('timeout-test/', logger.timout_test),
