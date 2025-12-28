@@ -167,8 +167,8 @@ def upload_to_s3(filepath, file_data, content_type):
     session = boto3.session.Session()
     client = session.client(
         's3',
-        endpoint_url='https://sfo2.digitaloceanspaces.com',
-        region_name='sfo2',
+        endpoint_url='https://9256cc796e5cb868fe6133131c353030.r2.cloudflarestorage.com',
+        # region_name='sfo2',
         aws_access_key_id=os.getenv('SPACES_ACCESS_KEY_ID'),
         aws_secret_access_key=os.getenv('SPACES_SECRET'))
 
@@ -259,8 +259,8 @@ def get_uploaded_images(blog):
     session = boto3.session.Session()
     client = session.client(
         's3',
-        endpoint_url='https://sfo2.digitaloceanspaces.com',
-        region_name='sfo2',
+        endpoint_url='https://9256cc796e5cb868fe6133131c353030.r2.cloudflarestorage.com',
+        # region_name='sfo2',
         aws_access_key_id=os.getenv('SPACES_ACCESS_KEY_ID'),
         aws_secret_access_key=os.getenv('SPACES_SECRET'))
 
@@ -292,8 +292,8 @@ def delete_selected_media(request, id):
         session = boto3.session.Session()
         client = session.client(
             's3',
-            endpoint_url='https://sfo2.digitaloceanspaces.com',
-            region_name='sfo2',
+            endpoint_url='https://9256cc796e5cb868fe6133131c353030.r2.cloudflarestorage.com',
+            # region_name='sfo2',
             aws_access_key_id=os.getenv('SPACES_ACCESS_KEY_ID'),
             aws_secret_access_key=os.getenv('SPACES_SECRET')
         )
