@@ -152,12 +152,12 @@
         订阅
         {% if newest %}
         <a
-            href="feed/?newest=True{% if lang %}&lang={{ lang }}{% endif %}"
+            href="/discover/feed/?newest=True{% if lang %}&lang={{ lang }}{% endif %}"
             title="https://kapibala.icu/discover/feed/?newest=True{% if lang %}&lang={{ lang }}{% endif %}"
         >RSS feed</a>
         {% else %}
         <a 
-            href="feed/{% if lang %}?lang={{ lang }}{% endif %}" 
+            href="/discover/feed/{% if lang %}?lang={{ lang }}{% endif %}" 
             title="https://kapibala.icu/discover/feed/{% if lang %}?lang={{ lang }}{% endif %}"
         >RSS feed</a>
         {% endif %}
