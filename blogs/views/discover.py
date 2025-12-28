@@ -6,8 +6,9 @@ from django.db.models import Q
 from django.utils import timezone
 from django.db.models.functions import Length
 
-from blogs.models import Post
-from blogs.helpers import clean_text
+from blogs.models import Blog, Post, Upvote
+from blogs.helpers import clean_text, salt_and_hash, unmark
+from blogs.views.analytics import render_analytics
 
 from feedgen.feed import FeedGenerator
 import tldextract
