@@ -12,14 +12,15 @@ import os
 def resolve_address(request):
     http_host = request.get_host()
 
-    sites = os.getenv('MAIN_SITE_HOSTS').split(',')
+    main_site_hosts = os.getenv('MAIN_SITE_HOSTS', '')
+    sites = main_site_hosts.split(',') if main_site_hosts else []
 
     if any(http_host == site for site in sites):
         # Homepage
         return None
 
     for site in sites:
-        if http_host.endswith('.' + site):
+        if site and http_host.endswith('.' + site):
             # Subdomained blog
             subdomain = http_host[:-(len(site) + 1)].lower()
             return get_object_or_404(Blog.objects.select_related('user').select_related('user__settings'), subdomain=subdomain, user__is_active=True)

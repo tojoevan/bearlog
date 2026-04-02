@@ -12,7 +12,10 @@ from functools import wraps
 def main_site_only(view_func):
     @wraps(view_func)
     def _wrapped_view(request, *args, **kwargs):
-        if not request.get_host() in os.getenv('MAIN_SITE_HOSTS').split(','):
+        main_site_hosts = os.getenv('MAIN_SITE_HOSTS', '')
+        sites = main_site_hosts.split(',') if main_site_hosts else []
+        
+        if request.get_host() not in sites:
             # If not the main site, redirect to a potential blog post
             from blogs.views.blog import home
             # Handle root path - show blog homepage

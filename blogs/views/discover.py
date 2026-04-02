@@ -1,9 +1,11 @@
 from django.http.response import HttpResponse
 from django.shortcuts import render, redirect
+import os
 from django.db.models import Q, Max, Min
 from django.utils import timezone
 from django.db.models.functions import Length
 from django.contrib.postgres.search import SearchQuery
+import tldextract
 
 from blogs.models import Post, Blog
 from blogs.helpers import clean_text, random_post_link, random_blog_link
@@ -17,12 +19,13 @@ posts_per_page = 20
 def resolve_address(request):
     http_host = request.get_host()
 
-    sites = os.getenv('MAIN_SITE_HOSTS').split(',')
+    main_site_hosts = os.getenv('MAIN_SITE_HOSTS', '')
+    sites = main_site_hosts.split(',') if main_site_hosts else []
 
     if any(http_host == site for site in sites):
         # Homepage
         return None
-    elif any(site in http_host for site in sites):
+    elif any(site and site in http_host for site in sites):
         # Subdomained blog
         subdomain = tldextract.extract(http_host).subdomain.lower()
 
