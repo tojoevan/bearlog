@@ -341,12 +341,14 @@ class Post(models.Model):
         super(Post, self).save(*args, **kwargs)
 
         # Update search vector via SQL to handle large content
-        with connection.cursor() as cursor:
-            cursor.execute("""
-                UPDATE blogs_post
-                SET search_vector = to_tsvector('english', COALESCE(title, '') || ' ' || COALESCE(all_tags, '') || ' ' || LEFT(COALESCE(content, ''), 50000))
-                WHERE id = %s
-            """, [self.pk])
+        # Note: to_tsvector is PostgreSQL-specific, skip for SQLite
+        if connection.vendor == 'postgresql':
+            with connection.cursor() as cursor:
+                cursor.execute("""
+                    UPDATE blogs_post
+                    SET search_vector = to_tsvector('english', COALESCE(title, '') || ' ' || COALESCE(all_tags, '') || ' ' || LEFT(COALESCE(content, ''), 50000))
+                    WHERE id = %s
+                """, [self.pk])
 
         # Save blog to trigger a few other things (unless skipped)
         if not skip_blog_save:
