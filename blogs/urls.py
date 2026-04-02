@@ -129,18 +129,18 @@ urlpatterns = [
     path('subscribe/', emailer.subscribe, name='subscribe'),
     path('email-subscribe/', emailer.email_subscribe, name='email_subscribe'),
     
-    # Feeds + aliases
-    path("feed/", feed.feed),
-    path("atom/", feed.feed),
-    path("rss/", feed.feed),
+    # Feeds + aliases (protected by main_site_only to route subdomain blogs correctly)
+    path("feed/", main_site_only(feed.feed)),
+    path("atom/", main_site_only(feed.feed)),
+    path("rss/", main_site_only(feed.feed)),
     
-    path("feed/atom/", feed.feed),
-    path("feed/rss/", feed.feed),
+    path("feed/atom/", main_site_only(feed.feed)),
+    path("feed/rss/", main_site_only(feed.feed)),
 
-    path("feed.xml", feed.feed),
-    path("atom.xml", feed.feed),
-    path("rss.xml", feed.feed),
-    path("index.xml", feed.feed),
+    path("feed.xml", main_site_only(feed.feed)),
+    path("atom.xml", main_site_only(feed.feed)),
+    path("rss.xml", main_site_only(feed.feed)),
+    path("index.xml", main_site_only(feed.feed)),
 
     # Generic path endpoint for slugs
     path('<path:slug>/', blog.post, name='post'),
