@@ -98,6 +98,8 @@ New post (Vditor) | Bear Blog
     >
         {% if post %}
         <b>title:</b> {{ post.title }}<br>
+        <b>link:</b> {{ post.slug }}<br>
+        <b>published_date:</b> <span id="published-date">{% format_date post.published_date 'Y-m-d H:i' 'en' tz %}</span><br>
         {% if post.alias %}<b>alias:</b> {{ post.alias }}{% endif %}{% if post.canonical_url %}<br>
         <b>canonical_url:</b> {{ post.canonical_url }}{% endif %}{% if post.meta_description %}<br>
         <b>meta_description:</b> {{ post.meta_description }}{% endif %}{% if post.meta_image %}<br>
@@ -107,51 +109,14 @@ New post (Vditor) | Bear Blog
         <b>is_page:</b> {{ post.is_page|lower }}{% endif %}{% if post.class_name %}<br>
         <b>class_name:</b> {{ post.class_name }}{% endif %}{% if not post.make_discoverable %}<br>
         <b>make_discoverable:</b> {{ post.make_discoverable|lower }}<br>{% endif %}{% elif template_header %}
-        <b>{{ template_header|linebreaksbr }}</b>{% if is_page %}<b>is_page:</b> true{% endif %}{% else %}<b>title:</b> <br>{% if is_page %}<b>is_page:</b> true{% endif %}{% endif %}
+        <b>{{ template_header|linebreaksbr }}</b>{% if is_page %}<b>is_page:</b> true{% endif %}{% else %}<b>title:</b> <br><b>link:</b> <br><b>published_date:</b> {% endif %}
     </div>
 
     <input type="hidden" id="hidden_header_content" name="header_content">
-    
-    <!-- 可编辑的 link 和 published_date 字段 -->
-    <div style="padding: 8px 0; border-bottom: 1px solid lightgrey; display: flex; gap: 20px; flex-wrap: wrap;">
-        <div>
-            <label for="post-link"><b>link:</b></label>
-            <input type="text" id="post-link" name="slug" value="{% if post %}{{ post.slug }}{% endif %}" 
-                   style="border: 1px solid #ddd; padding: 4px 8px; width: 200px;" 
-                   onchange="updateHeaderContent()">
-        </div>
-        <div>
-            <label for="post-published-date"><b>published_date:</b></label>
-            <input type="datetime-local" id="post-published-date" name="published_date" 
-                   value="{% if post and post.published_date %}{{ post.published_date|date:'Y-m-d\TH:i' }}{% endif %}"
-                   style="border: 1px solid #ddd; padding: 4px 8px;">
-        </div>
-    </div>
+    <input type="hidden" id="hidden-slug" name="slug" value="{% if post %}{{ post.slug }}{% endif %}">
+    <input type="hidden" id="hidden-published-date" name="published_date" value="{% if post and post.published_date %}{{ post.published_date|date:'Y-m-d H:i' }}{% endif %}">
 
     <div id="vditor"></div>
-    
-    <script>
-    function updateHeaderContent() {
-        var headerContent = document.getElementById('header_content');
-        var title = headerContent.innerText.match(/<b>title:<\/b>\s*(.*?)(?:<br>|$)/);
-        title = title ? title[1].trim() : '';
-        
-        var link = document.getElementById('post-link').value;
-        var currentHeader = headerContent.innerHTML;
-        
-        // 移除旧的 title 和 link 行
-        var lines = currentHeader.split('<br>');
-        var newLines = [];
-        for (var i = 0; i < lines.length; i++) {
-            if (!lines[i].includes('<b>title:</b>') && !lines[i].includes('<b>link:</b>')) {
-                newLines.push(lines[i]);
-            }
-        }
-        
-        // 在开头添加新的 title 和 link
-        headerContent.innerHTML = '<b>title:</b> ' + title + '<br><b>link:</b> ' + link + '<br>' + newLines.join('<br>');
-    }
-    </script>
     <input type="hidden" name="body_content" id="body_content" value="{% if post %}{{ post.content|escapejs }}{% else %}{{ template_body|escapejs }}{% endif %}">
 
     <span class="helptext sticky">
