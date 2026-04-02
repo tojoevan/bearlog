@@ -32,14 +32,18 @@ def resolve_address(request):
         return get_blog_with_domain(http_host)
 
 def get_base_query(user=None):
-    queryset = Post.objects.select_related("blog").filter(
-        publish=True,
-        blog__reviewed=True,
-        blog__user__is_active=True,
-        make_discoverable=True,
-        published_date__lte=timezone.now(),
-        # blog__posts_in_last_12_hours__lte=3
-    ).annotate(
+    from django.conf import settings
+    filters = {
+        'publish': True,
+        'blog__user__is_active': True,
+        'make_discoverable': True,
+        'published_date__lte': timezone.now(),
+    }
+    # Only require review in production
+    if not settings.DEBUG:
+        filters['blog__reviewed'] = True
+    
+    queryset = Post.objects.select_related("blog").filter(**filters).annotate(
         content_length=Length('content')
     ).filter(
         content_length__gte=20
