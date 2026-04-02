@@ -88,15 +88,10 @@ def home(request):
         # Don't cache here because of dashboard
         return render(request, 'landing.html')
 
-
-def index(request):
-    """Render the index.html template for the main site homepage"""
-    return render(request, 'index.html')
-
     all_posts = blog.posts.filter(publish=True, published_date__lte=timezone.now(), is_page=False).order_by('-published_date')
 
     meta_description = blog.meta_description or unmark(blog.content)[:157] + '...'
-    
+
     response = render(
         request,
         'home.html',
@@ -111,6 +106,11 @@ def index(request):
     response['Cache-Control'] = "public, s-maxage=43200, max-age=0"
 
     return response
+
+
+def index(request):
+    """Render the index.html template for the main site homepage"""
+    return render(request, 'index.html')
 
 
 def posts(request, blog):
