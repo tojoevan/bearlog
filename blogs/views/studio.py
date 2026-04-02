@@ -364,6 +364,13 @@ def vditor_post(request, id, uid=None):
     body_content = request.POST.get("body_content", "")
     preview = request.POST.get("preview", False) == "true"
 
+    template_header = ""
+    template_body = ""
+    if blog.post_template:
+        template_parts = blog.post_template.split("___", 1)
+        if len(template_parts) == 2:
+            template_header, template_body = template_parts
+
     if request.method == "POST" and header_content:
         if blog.posts.count() >= 5000:
             error_messages.append("You have reached the maximum number of posts. This is a safety feature to prevent abuse. If you're sure you need more, please contact support.")
@@ -371,6 +378,9 @@ def vditor_post(request, id, uid=None):
                 'blog': blog,
                 'post': post,
                 'error_messages': error_messages,
+                'template_header': template_header,
+                'template_body': template_body,
+                'is_page': is_page,
             })
         if len(body_content) > 1000000:
             error_messages.append("Your content is too long. This is a safety feature to prevent abuse. If you're sure you need more, please contact support.")
@@ -378,6 +388,9 @@ def vditor_post(request, id, uid=None):
                 'blog': blog,
                 'post': post,
                 'error_messages': error_messages,
+                'template_header': template_header,
+                'template_body': template_body,
+                'is_page': is_page,
             })
         
         raw_header = [item for item in header_content.split('\r\n') if item]
@@ -508,13 +521,6 @@ def vditor_post(request, id, uid=None):
         except Exception as error:
             error_messages.append(f"Header attribute error - your post has not been saved. Error: {str(error)}")
             post.content = body_content
-
-    template_header = ""
-    template_body = ""
-    if blog.post_template:
-        template_parts = blog.post_template.split("___", 1)
-        if len(template_parts) == 2:
-            template_header, template_body = template_parts
 
     return render(request, 'studio/vditor_post_edit.html', {
         'blog': blog,
