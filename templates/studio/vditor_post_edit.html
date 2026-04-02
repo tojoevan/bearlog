@@ -148,7 +148,7 @@ New post (Vditor) | Bear Blog
     
     <input type="hidden" name="body_content" id="body_content" value="{% if post %}{{ post.content|escapejs }}{% else %}{{ template_body|escapejs }}{% endif %}">
 
-    <span class="helptext sticky">
+    <span class="helptext">
         <span>
             <a href='https://herman.bearblog.dev/markdown-cheatsheet/' target='_blank'>Markdown syntax</a>
         </span>
@@ -162,11 +162,14 @@ New post (Vditor) | Bear Blog
 
 <script src="https://cdn.jsdelivr.net/npm/vditor@3.10.8/dist/index.min.js"></script>
 <script>
-    const vditor = new Vditor('vditor', {
+document.addEventListener('DOMContentLoaded', function() {
+    let vditor = null;
+    
+    vditor = new Vditor('vditor', {
         height: 500,
         mode: 'wysiwyg',
         placeholder: 'Start writing...',
-        value: document.getElementById('body_content').value,
+        value: document.getElementById('body_content') ? document.getElementById('body_content').value : '',
         toolbar: [
             'headings',
             'bold',
@@ -222,8 +225,10 @@ New post (Vditor) | Bear Blog
             const postForm = document.getElementById('post-form');
             if (postForm) {
                 postForm.addEventListener('submit', function(e) {
-                    document.getElementById('body_content').value = vditor.getValue();
-                    document.getElementById('hidden_header_content').value = document.getElementById('header_content').innerText;
+                    const bodyContent = document.getElementById('body_content');
+                    const hiddenHeader = document.getElementById('hidden_header_content');
+                    if (bodyContent) bodyContent.value = vditor.getValue();
+                    if (hiddenHeader) hiddenHeader.value = document.getElementById('header_content').innerText;
                 });
             }
         }
@@ -234,7 +239,8 @@ New post (Vditor) | Bear Blog
     if (previewBtn) {
         previewBtn.addEventListener('click', function(e) {
             e.preventDefault();
-            document.getElementById('body_content').value = vditor.getValue();
+            const bodyContent = document.getElementById('body_content');
+            if (bodyContent) bodyContent.value = vditor.getValue();
             document.getElementById('hidden_header_content').value = document.getElementById('header_content').innerText;
             
             const form = document.createElement('form');
@@ -296,12 +302,13 @@ New post (Vditor) | Bear Blog
     }
     
     {% if post and post.uid %}
-    function deletePost() {
+    window.deletePost = function() {
         if (confirm('Are you sure you want to delete this post?')) {
             window.location.href = '{% url 'post_delete' id=blog.subdomain uid=post.uid %}';
         }
     }
     {% endif %}
+});
 </script>
 
 {{ request.user.settings.dashboard_footer | safe }}
