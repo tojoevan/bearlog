@@ -15,15 +15,13 @@ def main_site_only(view_func):
         main_site_hosts = os.getenv('MAIN_SITE_HOSTS', '')
         sites = main_site_hosts.split(',') if main_site_hosts else []
         
-        if request.get_host() not in sites:
+        # If MAIN_SITE_HOSTS is empty or host is not in sites, treat as blog subdomain
+        if not sites or request.get_host() not in sites:
             # If not the main site, redirect to a potential blog post
             from blogs.views.blog import home
             # Handle root path - show blog homepage
-            print(f"[DEBUG] main_site_only: host={request.get_host()}, path={request.path}")
             if request.path == '/' or request.path == '':
-                print("[DEBUG] Routing to home(request)")
                 return home(request)
-            print(f"[DEBUG] Routing to blog.post with slug={request.path}")
             return blog.post(request, slug=request.path)
         return view_func(request, *args, **kwargs)
     return _wrapped_view
