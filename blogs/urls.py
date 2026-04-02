@@ -12,19 +12,26 @@ from functools import wraps
 def main_site_only(view_func):
     @wraps(view_func)
     def _wrapped_view(request, *args, **kwargs):
+        import sys
+        print(f"[DEBUG] Request: host={request.get_host()}, path={request.path}", file=sys.stderr)
+        
         main_site_hosts = os.getenv('MAIN_SITE_HOSTS', '')
         sites = main_site_hosts.split(',') if main_site_hosts else []
+        print(f"[DEBUG] MAIN_SITE_HOSTS={repr(main_site_hosts)}, sites={sites}", file=sys.stderr)
         
         # Get host without port
         http_host = request.get_host().split(':')[0]
         
         # If MAIN_SITE_HOSTS is empty or host is not in sites, treat as blog subdomain
         if not sites or http_host not in sites:
+            print(f"[DEBUG] Host {http_host} not in sites, routing as subdomain blog", file=sys.stderr)
             # If not the main site, redirect to a potential blog post
             from blogs.views.blog import home
             # Handle root path - show blog homepage
             if request.path == '/' or request.path == '':
+                print(f"[DEBUG] Routing to home(request)", file=sys.stderr)
                 return home(request)
+            print(f"[DEBUG] Routing to blog.post with slug={request.path}", file=sys.stderr)
             return blog.post(request, slug=request.path)
         return view_func(request, *args, **kwargs)
     return _wrapped_view
