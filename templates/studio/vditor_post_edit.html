@@ -15,15 +15,32 @@ New post (Vditor) | Bear Blog
     {{ request.user.settings.dashboard_styles | safe }}
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/vditor@3.10.8/dist/index.css" />
     <style>
-        .vditor-reset {
-            padding: 20px !important;
-        }
         #vditor {
             min-height: 500px;
             border: 1px solid lightgrey;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        .vditor {
+            max-width: 100%;
+        }
+        .vditor-reset {
+            padding: 20px !important;
+            min-height: 400px;
         }
         .vditor-toolbar {
             border-bottom: 1px solid lightgrey;
+            flex-wrap: wrap;
+        }
+        .post-form {
+            max-width: 100%;
+        }
+        .sticky-controls {
+            position: sticky;
+            top: 0;
+            background: white;
+            z-index: 100;
+            padding: 10px 0;
         }
     </style>
 {% endblock %}
