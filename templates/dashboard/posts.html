@@ -26,6 +26,11 @@
     New post
     </button>
 </a>
+<a href="{% url 'vditor_post_new' id=blog.subdomain %}" style="margin-left: 10px;">
+    <button>
+    Vditor editor
+    </button>
+</a>
 <a style="float:right;" href="{% url 'post_template' id=blog.subdomain %}">
     <button>Edit template</button>
 </a>

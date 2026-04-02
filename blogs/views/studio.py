@@ -344,6 +344,188 @@ def post(request, id, uid=None):
     })
 
 
+@login_required
+def vditor_post(request, id, uid=None):
+    """Vditor-based markdown editor view - uses the same backend logic as post()"""
+    if request.user.is_superuser:
+        blog = get_object_or_404(Blog, subdomain=id)
+    else:
+        blog = get_object_or_404(Blog, user=request.user, subdomain=id)
+
+    is_page = request.GET.get('is_page', '')
+    tags = []
+    post = None
+
+    if uid:
+        post = Post.objects.filter(blog=blog, uid=uid).first()
+
+    error_messages = []
+    header_content = request.POST.get("header_content", "")
+    body_content = request.POST.get("body_content", "")
+    preview = request.POST.get("preview", False) == "true"
+
+    if request.method == "POST" and header_content:
+        if blog.posts.count() >= 5000:
+            error_messages.append("You have reached the maximum number of posts. This is a safety feature to prevent abuse. If you're sure you need more, please contact support.")
+            return render(request, 'studio/vditor_post_edit.html', {
+                'blog': blog,
+                'post': post,
+                'error_messages': error_messages,
+            })
+        if len(body_content) > 1000000:
+            error_messages.append("Your content is too long. This is a safety feature to prevent abuse. If you're sure you need more, please contact support.")
+            return render(request, 'studio/vditor_post_edit.html', {
+                'blog': blog,
+                'post': post,
+                'error_messages': error_messages,
+            })
+        
+        raw_header = [item for item in header_content.split('\r\n') if item]
+        is_new = False
+
+        if not post:
+            post = Post(blog=blog)
+            is_new = True
+
+        try:
+            # Clear out data
+            slug = ''
+            post.alias = ''
+            post.class_name = ''
+            post.canonical_url = ''
+            post.meta_description = ''
+            post.meta_image = ''
+            post.is_page = False
+            post.make_discoverable = True
+            post.lang = ''
+            post.all_tags = '[]'
+
+            # Parse and populate header data
+            for item in raw_header:
+                item = item.split(':', 1)
+                name = item[0].strip()
+
+                # Prevent index error
+                if len(item) == 2:
+                    value = item[1].strip()
+                else:
+                    value = ''
+
+                if str(value).lower() == 'true':
+                    value = True
+                if str(value).lower() == 'false':
+                    value = False
+
+                if name == 'title':
+                    post.title = value
+                elif name == 'link':
+                    slug = value
+                elif name == 'alias':
+                    if value[0] == '/':
+                        value = value[1:]
+                    if value[-1] == '/':
+                        value = value[:-1]
+                    post.alias = value
+                elif name == 'published_date':
+                    if not value:
+                        post.published_date = timezone.now()
+                    else:
+                        value = str(value).replace('/', '-')
+                        try:
+                            # Convert given date/time from local timezone to UTC
+                            naive_datetime = datetime.fromisoformat(value)
+                            user_timezone = request.COOKIES.get('timezone', 'UTC')
+
+                            try:
+                                user_tz = ZoneInfo(user_timezone)
+                            except Exception as e:
+                                user_tz = ZoneInfo('UTC')
+
+                            aware_datetime = timezone.make_aware(naive_datetime, user_tz)
+                            utc_datetime = aware_datetime.astimezone(ZoneInfo('UTC'))
+                            post.published_date = utc_datetime
+                        except Exception as e:
+                            error_messages.append('Bad date format. Use YYYY-MM-DD HH:MM')
+                elif name == 'tags':
+                    tags = []
+                    for tag in value.split(','):
+                        stripped_tag = tag.strip()
+                        if stripped_tag and stripped_tag not in tags:
+                            tags.append(stripped_tag)
+                    post.all_tags = json.dumps(tags)
+                elif name == 'make_discoverable':
+                    if type(value) is bool:
+                        post.make_discoverable = value
+                    else:
+                        error_messages.append('make_discoverable needs to be "true" or "false"')
+                elif name == 'is_page':
+                    if type(value) is bool:
+                        post.is_page = value
+                    else:
+                        error_messages.append('is_page needs to be "true" or "false"')
+                elif name == 'class_name':
+                    post.class_name = slugify(value)
+                elif name == 'canonical_url':
+                    post.canonical_url = value
+                elif name == 'lang':
+                    post.lang = value
+                elif name == 'meta_description':
+                    post.meta_description = value
+                elif name == 'meta_image':
+                    post.meta_image = value
+                else:
+                    error_messages.append(f"{name} is an unrecognised header option")
+
+            if not post.title:
+                post.title = "New post"
+
+            post.slug = unique_slug(blog, post, slug)
+
+            if not post.published_date:
+                post.published_date = timezone.now()
+
+            post.content = body_content
+
+            post.publish = request.POST.get("publish", False) == "true"
+            post.last_modified = timezone.now()
+
+            if preview:
+                return post
+            else:
+                post.save()
+                
+                # Backup blog
+                backup_in_thread(blog)
+                
+                if is_new:
+                    # Self-upvote
+                    upvote = Upvote(post=post, hash_id=salt_and_hash(request, 'year'))
+                    upvote.save()
+
+                    # Redirect to the new post detail view (using vditor editor)
+                    return redirect('vditor_post_edit', id=blog.subdomain, uid=post.uid)
+
+        except Exception as error:
+            error_messages.append(f"Header attribute error - your post has not been saved. Error: {str(error)}")
+            post.content = body_content
+
+    template_header = ""
+    template_body = ""
+    if blog.post_template:
+        template_parts = blog.post_template.split("___", 1)
+        if len(template_parts) == 2:
+            template_header, template_body = template_parts
+
+    return render(request, 'studio/vditor_post_edit.html', {
+        'blog': blog,
+        'post': post,
+        'error_messages': error_messages,
+        'template_header': template_header,
+        'template_body': template_body,
+        'is_page': is_page
+    })
+
+
 def unique_slug(blog, post, new_slug):
     # Clean the new_slug to be alphanumeric lowercase with only '/', '_' and '-' allowed
     cleaned_slug = ''.join(c for c in new_slug.lower() if c.isalnum() or c == '/' or c == '-' or c == '_')

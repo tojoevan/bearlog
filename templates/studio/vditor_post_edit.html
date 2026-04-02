@@ -1,0 +1,281 @@
+{% extends 'base.html' %}
+{% load custom_tags %}
+
+{% block title %}
+{% if post %}
+Editing {{ post.title }} | Bear Blog
+{% else %}
+New post (Vditor) | Bear Blog
+{% endif %}
+{% endblock %}
+
+{% block custom_styles %}
+    {% include 'styles/blog/default.css' %}
+    {% include 'styles/dashboard.css' %}
+    {{ request.user.settings.dashboard_styles | safe }}
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/vditor@3.10.8/dist/index.css" />
+    <style>
+        .vditor-reset {
+            padding: 20px !important;
+        }
+        #vditor {
+            min-height: 500px;
+            border: 1px solid lightgrey;
+        }
+        .vditor-toolbar {
+            border-bottom: 1px solid lightgrey;
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+
+{% if error_messages %}
+<p style="color:lightsalmon">
+    {% for error_message in error_messages %}
+        {{ error_message }}<br>
+    {% endfor %}
+</p>
+{% endif %}
+<form method="POST" class="post-form full-width" id="post-form">
+    <p class="sticky-controls">
+        <button
+            type="button"
+            id="back-button"
+            onclick="event.preventDefault(); sessionStorage.clear(); window.location = '{% if post.is_page or is_page %}{% url 'pages_edit' id=blog.subdomain %}{% else %}{% url 'posts_edit' id=blog.subdomain %}{% endif %}'"
+        >
+            &#8592; Back
+        </button>
+        <button type="submit" id="publish-button" onclick="document.getElementById('publish').value = true;">Publish</button>
+        
+        {% if post %}
+            <button type="button" id="view-button" onclick="event.preventDefault(); window.open('{{ blog.dynamic_useful_domain }}/{{ post.slug }}{% if not post.publish %}?token={{ post.token }}{% endif %}');">
+                View{% if not post.publish %} draft{% endif %}
+            </button>
+            <button
+                type="button"
+                id="delete-button"
+                style="color: red; float: right;"
+                onclick="event.preventDefault(); deletePost();"
+            >
+                Delete
+            </button>
+        {% endif %}
+        <button
+            type="submit"
+            {% if post.publish %}
+            style="color: lightsalmon;"
+            id="unpublish-button"
+            {% else %}
+            id="save-button"
+            {% endif %}
+            onclick="document.getElementById('publish').value = false;"
+        >
+            {% if post.publish %}
+            Unpublish
+            {% else %}
+            Save as draft
+            {% endif %}
+        </button>
+    </p>
+
+    <details style="font-size: 12px; margin-bottom: 10px;">
+        <summary>
+            Attributes
+        </summary>
+        <p>
+            title: I like Bears<br>
+            link: i-like-bears<br>
+            alias: 2012/01/02/cool-post.html<br>
+            canonical_url: https://example.com/bears<br>
+            published_date: 2022-12-30 08:30<br>
+            is_page: false<br>
+            meta_description: Look for the bear necessities.<br>
+            meta_image: https://example.com/image.jpeg<br>
+            lang: en<br>
+            tags: {% if blog.tags %}{{ blog.tags|join:", " }}{% else %}bears, writing, thoughts{% endif %}<br>
+            make_discoverable: true
+        </p>
+        <a href="https://docs.bearblog.dev/post" target="_blank">
+            More info
+        </a>
+    </details>
+    
+    {% csrf_token %}
+    <input type="text" name="publish" id="publish" value="{{ post.publish|lower }}" hidden>
+    <div
+        id="header_content"
+        class="editable"
+        contenteditable="true"
+        style="margin-bottom:-1px; border-bottom: 1px solid lightgrey;"
+    >
+        {% if post %}
+        <b>title:</b> {{ post.title }}<br>
+        <b>link:</b> {{ post.slug }}{% if post.alias %}<br>
+        <b>alias:</b> {{ post.alias }}{% endif %}<br>
+        <b>published_date:</b> <span id="published-date">{% format_date post.published_date 'Y-m-d H:i' 'en' tz %}</span>{% if post.canonical_url %}<br>
+        <b>canonical_url:</b> {{ post.canonical_url }}{% endif %}{% if post.meta_description %}<br>
+        <b>meta_description:</b> {{ post.meta_description }}{% endif %}{% if post.meta_image %}<br>
+        <b>meta_image:</b> {{ post.meta_image }}{% endif %}{% if post.lang %}<br>
+        <b>lang:</b> {{ post.lang }}{% endif %}{% if post.tags|length > 0 %}<br>
+        <b>tags:</b> {{ post.tags|join:", " }}{% endif %}{% if post.is_page %}<br>
+        <b>is_page:</b> {{ post.is_page|lower }}{% endif %}{% if post.class_name %}<br>
+        <b>class_name:</b> {{ post.class_name }}{% endif %}{% if not post.make_discoverable %}<br>
+        <b>make_discoverable:</b> {{ post.make_discoverable|lower }}<br>{% endif %}{% elif template_header %}
+        <b>{{ template_header|linebreaksbr }}</b>{% if is_page %}<b>is_page:</b> true{% endif %}{% else %}<b>title:</b> <br>{% if is_page %}<b>is_page:</b> true{% endif %}{% endif %}
+    </div>
+
+    <input type="hidden" id="hidden_header_content" name="header_content">
+    
+    <div id="vditor"></div>
+    
+    <input type="hidden" name="body_content" id="body_content" value="{% if post %}{{ post.content|escapejs }}{% else %}{{ template_body|escapejs }}{% endif %}">
+
+    <span class="helptext sticky">
+        <span>
+            <a href='https://herman.bearblog.dev/markdown-cheatsheet/' target='_blank'>Markdown syntax</a>
+        </span>
+        <span>
+            <a id='upload-image'>Insert media</a> |
+            <a href="{% url 'media_center' id=blog.subdomain %}" target="_blank">Media</a> |
+            <a id="preview">Preview</a>
+        </span>
+    </span>
+</form>
+
+<script src="https://cdn.jsdelivr.net/npm/vditor@3.10.8/dist/index.min.js"></script>
+<script>
+    const vditor = new Vditor('vditor', {
+        height: 500,
+        mode: 'wysiwyg',
+        placeholder: 'Start writing...',
+        value: document.getElementById('body_content').value,
+        toolbar: [
+            'headings',
+            'bold',
+            'italic',
+            'strike',
+            '|',
+            'line',
+            'quote',
+            'list',
+            'ordered-list',
+            'check',
+            '|',
+            'code',
+            'inline-code',
+            'link',
+            'table',
+            '|',
+            'upload',
+            '|',
+            'undo',
+            'redo',
+            '|',
+            'preview',
+            'fullscreen',
+            '|',
+            'both',
+            'editonly'
+        ],
+        upload: {
+            accept: 'image/*',
+            url: '{% url 'upload_image' id=blog.subdomain %}',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            fieldName: 'file',
+            success: (editor, result) => {
+                if (result && result.url) {
+                    vditor.insertValue(`![](${result.url})`);
+                }
+            },
+            error: (msg) => {
+                alert('Upload failed: ' + msg);
+            }
+        },
+        preview: {
+            url: '{% url 'post_preview' id=blog.subdomain %}',
+            parse: (element) => {
+                // Auto parse on preview
+            }
+        },
+        after: () => {
+            // Sync content to hidden input before form submit
+            document.getElementById('post-form').addEventListener('submit', function(e) {
+                document.getElementById('body_content').value = vditor.getValue();
+                document.getElementById('hidden_header_content').value = document.getElementById('header_content').innerText;
+            });
+        }
+    });
+    
+    // Preview functionality
+    document.getElementById('preview').addEventListener('click', function(e) {
+        e.preventDefault();
+        document.getElementById('body_content').value = vditor.getValue();
+        document.getElementById('hidden_header_content').value = document.getElementById('header_content').innerText;
+        
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '{% url 'post_preview' id=blog.subdomain %}';
+        form.target = '_blank';
+        
+        form.innerHTML = `
+            {% csrf_token %}
+            <input type="hidden" name="header_content" value="">
+            <input type="hidden" name="body_content" value="">
+        `;
+        
+        form.querySelector('input[name="header_content"]').value = document.getElementById('header_content').innerText;
+        form.querySelector('input[name="body_content"]').value = vditor.getValue();
+        
+        document.body.appendChild(form);
+        form.submit();
+        document.body.removeChild(form);
+    });
+    
+    // Upload image functionality
+    document.getElementById('upload-image').addEventListener('click', function(e) {
+        e.preventDefault();
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'image/*';
+        input.onchange = function() {
+            if (this.files && this.files[0]) {
+                const formData = new FormData();
+                formData.append('file', this.files[0]);
+                
+                fetch('{% url 'upload_image' id=blog.subdomain %}', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': '{{ csrf_token }}'
+                    },
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.url) {
+                        vditor.insertValue(`![](${data.url})`);
+                    } else if (data.error) {
+                        alert('Upload failed: ' + data.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Upload failed');
+                });
+            }
+        };
+        input.click();
+    });
+    
+    function deletePost() {
+        if (confirm('Are you sure you want to delete this post?')) {
+            window.location.href = '{% url 'post_delete' id=blog.subdomain uid=post.uid %}';
+        }
+    }
+</script>
+
+{% include '../snippets/editor_functions.html' with blog=blog post=post%}
+{{ request.user.settings.dashboard_footer | safe }}
+{% endblock %}

@@ -83,6 +83,9 @@ urlpatterns = [
     path('<id>/dashboard/posts/new/', main_site_only(studio.post), name="post_new"),
     path('<id>/dashboard/posts/<uid>/', main_site_only(studio.post), name="post_edit"),
     path('<id>/dashboard/posts/<uid>/delete/', main_site_only(dashboard.post_delete), name='post_delete'),
+    # Vditor editor routes
+    path('<id>/dashboard/vditor/new/', main_site_only(studio.vditor_post), name="vditor_post_new"),
+    path('<id>/dashboard/vditor/<uid>/', main_site_only(studio.vditor_post), name="vditor_post_edit"),
     path('<id>/dashboard/preview/', main_site_only(studio.preview), name="post_preview"),
 
     path('<id>/dashboard/post-template/', main_site_only(studio.post_template), name="post_template"),
