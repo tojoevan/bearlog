@@ -9,46 +9,48 @@ New post (Vditor) | Bear Blog
 {% endif %}
 {% endblock %}
 
+{% block imports %}
+    {{ block.super }}
+{% endblock %}
+
 {% block custom_styles %}
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/vditor@3.10.8/dist/index.css?v=3.10.8" />
-    <style>
-        body {
-            overflow-x: hidden;
-        }
-        .full-width {
-            max-width: 100%;
-            padding: 20px;
-            box-sizing: border-box;
-        }
-        .sticky-controls {
-            position: sticky;
-            top: 0;
-            background: #fff;
-            z-index: 999;
-            padding: 10px;
-            border-bottom: 1px solid #ddd;
-            margin: -20px -20px 20px -20px;
-        }
-        .sticky-controls button {
-            margin-right: 10px;
-            padding: 8px 16px;
-            cursor: pointer;
-        }
-        #header_content {
-            padding: 15px;
-            border: 1px solid #ddd;
-            margin-bottom: 20px;
-            min-height: 80px;
-        }
-        #vditor {
-            margin-bottom: 20px;
-        }
-        .helptext {
-            display: block;
-            margin-top: 10px;
-            font-size: 14px;
-        }
-    </style>
+    {% include 'styles/blog/default.css' %}
+    {% include 'styles/dashboard.css' %}
+    {{ request.user.settings.dashboard_styles | safe }}
+    @import url('https://cdn.jsdelivr.net/npm/vditor@3.10.8/dist/index.css');
+    .full-width {
+        max-width: 100%;
+        padding: 20px;
+        box-sizing: border-box;
+    }
+    .sticky-controls {
+        position: sticky;
+        top: 0;
+        background: #fff;
+        z-index: 999;
+        padding: 10px;
+        border-bottom: 1px solid #ddd;
+        margin: -20px -20px 20px -20px;
+    }
+    .sticky-controls button {
+        margin-right: 10px;
+        padding: 8px 16px;
+        cursor: pointer;
+    }
+    #header_content {
+        padding: 15px;
+        border: 1px solid #ddd;
+        margin-bottom: 20px;
+        min-height: 80px;
+    }
+    #vditor {
+        margin-bottom: 20px;
+    }
+    .helptext {
+        display: block;
+        margin-top: 10px;
+        font-size: 14px;
+    }
 {% endblock %}
 
 {% block content %}
