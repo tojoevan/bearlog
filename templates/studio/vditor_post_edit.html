@@ -48,7 +48,7 @@ New post (Vditor) | Bear Blog
         </button>
         <button type="submit" id="publish-button" onclick="document.getElementById('publish').value = true;">Publish</button>
         
-        {% if post %}
+        {% if post and post.uid %}
             <button type="button" id="view-button" onclick="event.preventDefault(); window.open('{{ blog.dynamic_useful_domain }}/{{ post.slug }}{% if not post.publish %}?token={{ post.token }}{% endif %}');">
                 View{% if not post.publish %} draft{% endif %}
             </button>
@@ -63,7 +63,7 @@ New post (Vditor) | Bear Blog
         {% endif %}
         <button
             type="submit"
-            {% if post.publish %}
+            {% if post and post.publish %}
             style="color: lightsalmon;"
             id="unpublish-button"
             {% else %}
