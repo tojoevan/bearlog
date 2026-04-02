@@ -116,6 +116,14 @@ New post (Vditor) | Bear Blog
     </div>
 </form>
 
+<script>
+(function() {
+    var link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = 'https://cdn.jsdelivr.net/npm/vditor@3.10.8/dist/index.css';
+    document.head.appendChild(link);
+})();
+</script>
 <script src="https://cdn.jsdelivr.net/npm/vditor@3.10.8/dist/index.min.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
