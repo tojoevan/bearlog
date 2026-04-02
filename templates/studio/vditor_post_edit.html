@@ -202,72 +202,81 @@ New post (Vditor) | Bear Blog
         },
         after: () => {
             // Sync content to hidden input before form submit
-            document.getElementById('post-form').addEventListener('submit', function(e) {
-                document.getElementById('body_content').value = vditor.getValue();
-                document.getElementById('hidden_header_content').value = document.getElementById('header_content').innerText;
-            });
+            const postForm = document.getElementById('post-form');
+            if (postForm) {
+                postForm.addEventListener('submit', function(e) {
+                    document.getElementById('body_content').value = vditor.getValue();
+                    document.getElementById('hidden_header_content').value = document.getElementById('header_content').innerText;
+                });
+            }
         }
     });
     
     // Preview functionality
-    document.getElementById('preview').addEventListener('click', function(e) {
-        e.preventDefault();
-        document.getElementById('body_content').value = vditor.getValue();
-        document.getElementById('hidden_header_content').value = document.getElementById('header_content').innerText;
-        
-        const form = document.createElement('form');
-        form.method = 'POST';
-        form.action = '{% url 'post_preview' id=blog.subdomain %}';
-        form.target = '_blank';
-        
-        form.innerHTML = `
-            {% csrf_token %}
-            <input type="hidden" name="header_content" value="">
-            <input type="hidden" name="body_content" value="">
-        `;
-        
-        form.querySelector('input[name="header_content"]').value = document.getElementById('header_content').innerText;
-        form.querySelector('input[name="body_content"]').value = vditor.getValue();
-        
-        document.body.appendChild(form);
-        form.submit();
-        document.body.removeChild(form);
-    });
+    const previewBtn = document.getElementById('preview');
+    if (previewBtn) {
+        previewBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            document.getElementById('body_content').value = vditor.getValue();
+            document.getElementById('hidden_header_content').value = document.getElementById('header_content').innerText;
+            
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = '{% url 'post_preview' id=blog.subdomain %}';
+            form.target = '_blank';
+            
+            form.innerHTML = `
+                {% csrf_token %}
+                <input type="hidden" name="header_content" value="">
+                <input type="hidden" name="body_content" value="">
+            `;
+            
+            form.querySelector('input[name="header_content"]').value = document.getElementById('header_content').innerText;
+            form.querySelector('input[name="body_content"]').value = vditor.getValue();
+            
+            document.body.appendChild(form);
+            form.submit();
+            document.body.removeChild(form);
+        });
+    }
     
     // Upload image functionality
-    document.getElementById('upload-image').addEventListener('click', function(e) {
-        e.preventDefault();
-        const input = document.createElement('input');
-        input.type = 'file';
-        input.accept = 'image/*';
-        input.onchange = function() {
-            if (this.files && this.files[0]) {
-                const formData = new FormData();
-                formData.append('file', this.files[0]);
-                
-                fetch('{% url 'upload_image' id=blog.subdomain %}', {
-                    method: 'POST',
-                    headers: {
-                        'X-CSRFToken': '{{ csrf_token }}'
-                    },
-                    body: formData
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.url) {
-                        vditor.insertValue(`![](${data.url})`);
-                    } else if (data.error) {
-                        alert('Upload failed: ' + data.error);
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    alert('Upload failed');
-                });
-            }
-        };
-        input.click();
-    });
+    const uploadBtn = document.getElementById('upload-image');
+    if (uploadBtn) {
+        uploadBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'image/*';
+            input.onchange = function() {
+                if (this.files && this.files[0]) {
+                    const formData = new FormData();
+                    formData.append('file', this.files[0]);
+                    
+                    fetch('{% url 'upload_image' id=blog.subdomain %}', {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRFToken': '{{ csrf_token }}'
+                        },
+                        body: formData
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.url) {
+                            vditor.insertValue(`![](${data.url})`);
+                        } else if (data.error) {
+                            alert('Upload failed: ' + data.error);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('Upload failed');
+                    });
+                }
+            };
+            input.click();
+        });
+    }
     
     {% if post and post.uid %}
     function deletePost() {
