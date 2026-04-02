@@ -14,18 +14,23 @@ def resolve_address(request):
 
     main_site_hosts = os.getenv('MAIN_SITE_HOSTS', '')
     sites = main_site_hosts.split(',') if main_site_hosts else []
+    
+    print(f"[DEBUG] resolve_address: host={http_host}, sites={sites}")
 
     if any(http_host == site for site in sites):
         # Homepage
+        print("[DEBUG] resolve_address: returning None (main site)")
         return None
 
     for site in sites:
         if site and http_host.endswith('.' + site):
             # Subdomained blog
             subdomain = http_host[:-(len(site) + 1)].lower()
+            print(f"[DEBUG] resolve_address: subdomain blog {subdomain}")
             return get_object_or_404(Blog.objects.select_related('user').select_related('user__settings'), subdomain=subdomain, user__is_active=True)
 
     # Custom domain blog
+    print(f"[DEBUG] resolve_address: falling through to get_blog_with_domain")
     return get_blog_with_domain(http_host)
 
 

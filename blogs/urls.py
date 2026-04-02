@@ -19,8 +19,11 @@ def main_site_only(view_func):
             # If not the main site, redirect to a potential blog post
             from blogs.views.blog import home
             # Handle root path - show blog homepage
+            print(f"[DEBUG] main_site_only: host={request.get_host()}, path={request.path}")
             if request.path == '/' or request.path == '':
+                print("[DEBUG] Routing to home(request)")
                 return home(request)
+            print(f"[DEBUG] Routing to blog.post with slug={request.path}")
             return blog.post(request, slug=request.path)
         return view_func(request, *args, **kwargs)
     return _wrapped_view
