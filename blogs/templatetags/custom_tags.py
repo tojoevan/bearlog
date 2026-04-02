@@ -55,7 +55,10 @@ HOST_WHITELIST = [
     'archive.org',
     'panel.radiocast.net',
     'embed.ente.io',
-    'app.hearthis.at'
+    'app.hearthis.at',
+    'datawrapper.de',
+    'datawrapper.dwcdn.net',
+    'guestbooks.kamiscorner.xyz'
 ]
 
 TYPOGRAPHIC_REPLACEMENTS = [
@@ -67,7 +70,8 @@ TYPOGRAPHIC_REPLACEMENTS = [
     ('(TM)', '™'),
     ('(p)', '℗'),
     ('(P)', '℗'),
-    ('+-', '±')
+    ('+-', '±'),
+    ('\\n', '<br>')
 ]
 
 
@@ -82,8 +86,12 @@ def replace_inline_latex(text):
 
     return replaced_text
 
+def escape_currency(text):
+    # Escape pairs of $<digit> as currency, e.g. "$5 ... $10" → "\$5 ... \$10"
+    return re.sub(r'(?<!\\)(\$\d[^$]*?)(?<!\\)(\$\d)', r'\\\1\\\2', text)
+
 def fix_links(text):
-    parentheses_pattern = r'\[([^\]]+)\]\(((?:tab:)?https?://[^\)]+\([^\)]+\)[^\)]*)\)'
+    parentheses_pattern = r'\[([^\]]+)\]\(((?:tab:)?https?://[^\)]+\([^\)]*\)[^\)]*)\)'
 
     def escape_parentheses(match):
         label = match.group(1)
@@ -98,8 +106,21 @@ def fix_links(text):
     return fixed_text
 
 class MyRenderer(HTMLRenderer):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self._heading_ids = {}
+
+    def reset_heading_ids(self):
+        self._heading_ids = {}
+
     def heading(self, text, level, **attrs):
-        return f'<h{level} id={slugify(text)}>{text}</h{level}>'
+        slug = slugify(text)
+        if slug in self._heading_ids:
+            self._heading_ids[slug] += 1
+            slug = f'{slug}-{self._heading_ids[slug]}'
+        else:
+            self._heading_ids[slug] = 0
+        return f'<h{level} id={slug}>{text}</h{level}>'
     
     def link(self, text, url, title=None):
         if title:
@@ -129,8 +150,6 @@ class MyRenderer(HTMLRenderer):
     
     def inline_math(self, text):
         # Skip rendering if there's a space before the closing dollar sign
-        if text.endswith(' '):
-            return f'${text}$'
         try:
             return latex2mathml.converter.convert(text)
         except Exception as e:
@@ -157,13 +176,51 @@ class MyRenderer(HTMLRenderer):
         return highlighted_code
 
 
-markdown_renderer = create_markdown(
+_mistune_renderer = create_markdown(
     renderer=MyRenderer(),
     plugins=['math', 'strikethrough', 'footnotes', 'table', 'superscript', 'subscript', 'mark', 'task_lists', 'abbr', RSTDirective([
         Admonition(),
         TableOfContents(),
     ]),],
     escape=False)
+# Remove 8-spaces for code block functionality
+_mistune_renderer.block.rules.remove('indent_code')
+_mistune_renderer.block.compile_sc()
+
+
+def markdown_renderer(content):
+    """Render markdown with script blocks protected from text processing."""
+    # Protect fenced code blocks from script extraction
+    code_placeholders = {}
+
+    def replace_code(match):
+        key = f"<!--EXCLUDE_CODE_{len(code_placeholders)}-->"
+        code_placeholders[key] = match.group(0)
+        return key
+
+    content = re.sub(r'(```[^\n]*\n.*?```|~~~[^\n]*\n.*?~~~)', replace_code, content, flags=re.DOTALL)
+
+    # Extract script blocks (now only those outside code fences)
+    script_placeholders = {}
+
+    def replace_script(match):
+        key = f"<!--EXCLUDE_SCRIPT_{len(script_placeholders)}-->"
+        script_placeholders[key] = match.group(0)
+        return key
+
+    content = re.sub(r'<script\b[^>]*>.*?</script>', replace_script, content, flags=re.DOTALL | re.IGNORECASE)
+
+    # Restore code blocks before rendering
+    for key, code in code_placeholders.items():
+        content = content.replace(key, code)
+
+    _mistune_renderer.renderer.reset_heading_ids()
+    result = _mistune_renderer(content)
+
+    for key, script in script_placeholders.items():
+        result = result.replace(key, script)
+
+    return result
 
 
 @register.simple_tag(takes_context=False)
@@ -172,10 +229,24 @@ def markdown(content, blog=None, post=None, tz=None):
     if not content:
         return ''
 
+    # Protect code blocks and inline code from currency/latex escaping
+    code_placeholders = {}
+    def _protect_code(match):
+        key = f"<!--EXCLUDE_BLOCK_{len(code_placeholders)}-->"
+        code_placeholders[key] = match.group(0)
+        return key
+    content = re.sub(r'```.*?```|`[^`\n]+`|<script[\s>].*?</script>', _protect_code, content, flags=re.DOTALL)
+
     # Removes old formatted inline LaTeX
     content = replace_inline_latex(content)
+    # Escape currency symbols so $30 isn't treated as math
+    content = escape_currency(content)
     # Find urls with parentheses and escape them
     content = fix_links(content)
+
+    # Restore code blocks
+    for key, code in code_placeholders.items():
+        content = content.replace(key, code)
 
     try:
         processed_markup = markdown_renderer(content)
@@ -198,36 +269,53 @@ def excluding_pre(markup, blog=None, post=None, tz=None):
     placeholders = {}
 
     def placeholder_div(match):
-        key = f"PLACEHOLDER_{len(placeholders)}"
+        key = f"<!--EXCLUDE_BLOCK_{len(placeholders)}-->"
         placeholders[key] = match.group(0)
         return key
 
     markup = re.sub(r'(<pre.*?>.*?</pre>|<code.*?>.*?</code>)', placeholder_div, markup, flags=re.DOTALL)
 
     if blog:
-        if post: 
+        if post:
             markup = element_replacement(markup, blog, post, tz=tz)
         else:
             markup = element_replacement(markup, blog, tz=tz)
     else:
         markup = element_replacement(markup, tz=tz)
 
-    for key in sorted(placeholders.keys(), reverse=True):
-        markup = markup.replace(key, placeholders[key])
+    for key, value in placeholders.items():
+        markup = markup.replace(key, value)
 
     return markup
 
 
-def apply_filters(posts, tag=None, limit=None, order=None):
+def apply_filters(posts, tag=None, limit=None, order=None, from_date=None, to_date=None):
     if order == 'asc':
         posts = posts.order_by('published_date')
     else:
         posts = posts.order_by('-published_date')
+    if from_date:
+        try:
+            start = timezone.datetime.strptime(from_date, '%Y-%m-%d').replace(tzinfo=ZoneInfo('UTC'))
+            posts = posts.filter(published_date__gte=start)
+        except ValueError:
+            pass
+    if to_date:
+        try:
+            end = timezone.datetime.strptime(to_date, '%Y-%m-%d').replace(tzinfo=ZoneInfo('UTC'))
+            end += timezone.timedelta(days=1)
+            posts = posts.filter(published_date__lt=end)
+        except ValueError:
+            pass
     if tag:
         # Split tags by comma and strip whitespace
         tags = [t.strip() for t in tag.replace('"', '').split(',')]
-        if tags:
-            posts = [post for post in posts if all(tag in post.tags for tag in tags)]
+        include_tags = [t for t in tags if t and not t.startswith('-')]
+        exclude_tags = [t[1:] for t in tags if t.startswith('-') and len(t) > 1]
+        if include_tags or exclude_tags:
+            posts = [post for post in posts if
+                all(t in post.tags for t in include_tags) and
+                not any(t in post.tags for t in exclude_tags)]
     if limit is not None:
         try:
             limit = int(limit)
@@ -244,9 +332,11 @@ def element_replacement(markup, blog, post=None, tz=None):
     def replace_with_filtered_posts(match):
         params_str = match.group(1) 
         tag, limit, order, description, image, content = None, None, None, False, False, False
-        
+        from_date = None
+        to_date = None
+
         # Extract and process parameters one by one
-        param_pattern = r'(tag:([^|}\s][^|}]*)|limit:(\d+)|order:(asc|desc)|description:(True)|image:(True)|content:(True))'
+        param_pattern = r'(tag:([^|}\s][^|}]*)|limit:(\d+)|order:(asc|desc)|description:(True)|image:(True)|content:(True)|from:(\d{4}-\d{2}-\d{2})|to:(\d{4}-\d{2}-\d{2}))'
         params = re.findall(param_pattern, params_str)
         for param in params:
             if 'tag:' in param[0]:
@@ -260,10 +350,14 @@ def element_replacement(markup, blog, post=None, tz=None):
             elif 'image:' in param[0]:
                 image  = param[5] == 'True'
             # Only show content if injection is on page or homepage
-            elif 'content:' in param[0] and not post or post.is_page:
+            elif 'content:' in param[0] and (not post or post.is_page):
                 content = param[6] == 'True'
+            elif 'from:' in param[0]:
+                from_date = param[7]
+            elif 'to:' in param[0]:
+                to_date = param[8]
 
-        filtered_posts = apply_filters(blog.posts.filter(publish=True, is_page=False, published_date__lte=timezone.now()), tag, limit, order)
+        filtered_posts = apply_filters(blog.posts.filter(publish=True, is_page=False, published_date__lte=timezone.now()), tag, limit, order, from_date, to_date)
         context = {'blog': blog, 'posts': filtered_posts, 'embed': True, 'show_description': description, 'show_image': image, 'show_content': content, 'tz': tz}
         return render_to_string('snippets/post_list.html', context)
 
@@ -297,7 +391,7 @@ def element_replacement(markup, blog, post=None, tz=None):
     markup = markup.replace('{{ blog_link }}', f"{blog.useful_domain}")
 
     if post:
-        markup = markup.replace('{{ post_title }}', escape(post.title))
+        markup = markup.replace('{{ post_title }}', safe_title(post.title))
         markup = markup.replace('{{ post_description }}', escape(post.meta_description))
         markup = markup.replace('{{ post_published_date }}', render_to_string('snippets/formatted_date.html', {"date": post.published_date}))
         last_modified = post.last_modified or timezone.now()
@@ -322,6 +416,14 @@ def element_replacement(markup, blog, post=None, tz=None):
 
 
 def get_adjacent_posts(post, blog):
+    if not post.published_date:
+        return {
+            'next_slug': None,
+            'next_title': None,
+            'previous_slug': None,
+            'previous_title': None,
+        }
+
     base_qs = Post.objects.filter(
         blog=blog,
         is_page=False,
@@ -343,6 +445,24 @@ def get_adjacent_posts(post, blog):
         'previous_slug': previous_post['slug'] if previous_post else None,
         'previous_title': previous_post['title'] if previous_post else None,
     }
+
+
+@register.filter
+def safe_title(title):
+    """Convert **bold** to <b>, *italic* to <i>, and &nbsp; to non-breaking spaces in titles."""
+    escaped = escape(title)
+    escaped = re.sub(r'\*\*(.+?)\*\*', r'<b>\1</b>', escaped)
+    escaped = re.sub(r'\*(.+?)\*', r'<i>\1</i>', escaped)
+    escaped = escaped.replace('&amp;nbsp;', '\u00a0')
+    return mark_safe(escaped)
+
+
+@register.filter
+def plain_title(title):
+    """Strip * markers and &nbsp; for plain-text contexts."""
+    title = re.sub(r'\*+(.+?)\*+', r'\1', title)
+    title = title.replace('&nbsp;', ' ')
+    return title
 
 
 @register.filter

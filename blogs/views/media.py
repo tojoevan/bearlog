@@ -1,7 +1,6 @@
 from django.utils.text import slugify
 from django.contrib.auth.decorators import login_required
-from django.http import HttpResponse, HttpResponseForbidden
-from django.http import StreamingHttpResponse
+from django.http import HttpResponse, HttpResponseForbidden, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
@@ -16,7 +15,6 @@ import re
 import json
 import os
 import boto3
-import requests
 import threading
 
 from blogs.models import Blog, Media
@@ -98,8 +96,8 @@ def upload_image(request, id):
 
         file_links = upload_files(blog, file_list, optimise)
 
-        return HttpResponse(json.dumps(sorted(file_links)), 200)
-    return HttpResponse('Failed', 400)
+        return JsonResponse(sorted(file_links), safe=False)
+    return HttpResponse('Failed', status=400, content_type='text/plain')
 
 
 def upload_files(blog, file_list, optimise=True):
@@ -312,23 +310,3 @@ def delete_selected_media(request, id):
             
         
     return redirect('media_center', id=id)
-
-
-def image_proxy(request, img):
-    # Construct the DigitalOcean Spaces URL
-    remote_url = f'https://pub-d3cdb3e12f644a39ae6f21c50fed1f89.r2.dev/{img}'
-    
-    # Stream the content from the remote URL
-    response = requests.get(remote_url, stream=True, timeout=10)
-    
-    # Define a generator to yield chunks of the response content
-    def generate():
-        for chunk in response.iter_content(chunk_size=8192):
-            yield chunk
-    
-    # Return a StreamingHttpResponse
-    return StreamingHttpResponse(
-        generate(),
-        status=response.status_code,
-        content_type=response.headers['Content-Type']
-    )

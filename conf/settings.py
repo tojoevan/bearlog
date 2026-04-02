@@ -2,7 +2,7 @@ import sentry_sdk
 import os
 import dj_database_url
 from pathlib import Path
-from dotenv import load_dotenv
+from conf.env_loader import load_dotenv
 
 load_dotenv()
 
@@ -73,7 +73,6 @@ AUTHENTICATION_BACKENDS = (
 
 MIDDLEWARE = [
     'blogs.middleware.RateLimitMiddleware',
-    'blogs.middleware.BotWallMiddleware',
     'blogs.middleware.ConditionalXFrameOptionsMiddleware',
     'django.middleware.gzip.GZipMiddleware',
     'django.middleware.security.SecurityMiddleware',
@@ -85,7 +84,6 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    # 'blogs.middleware.RequestPerformanceMiddleware',
     'allauth.account.middleware.AccountMiddleware',
 ]
 
@@ -103,7 +101,6 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
-                'django.template.context_processors.request',
                 'blogs.context_processors.extra'
             ],
         },
@@ -114,15 +111,13 @@ TEMPLATES = [
 WSGI_APPLICATION = 'conf.wsgi.application'
 
 # All-auth setup
-ACCOUNT_AUTHENTICATION_METHOD = 'email'
+ACCOUNT_LOGIN_METHODS = {'email'}
 if not DEBUG:
     ACCOUNT_EMAIL_VERIFICATION = 'none'
     ACCOUNT_CONFIRM_EMAIL_ON_GET = True
     ACCOUNT_LOGIN_ON_EMAIL_CONFIRMATION = True
-ACCOUNT_EMAIL_REQUIRED = True
+ACCOUNT_SIGNUP_FIELDS = ['email*', 'password1*']
 ACCOUNT_UNIQUE_EMAIL = True
-ACCOUNT_USERNAME_REQUIRED = False
-ACCOUNT_SIGNUP_PASSWORD_ENTER_TWICE = False
 ACCOUNT_DEFAULT_HTTP_PROTOCOL = "https"
 SESSION_COOKIE_AGE = 60 * 60 * 24 * 90 # 90 days
 
@@ -189,8 +184,6 @@ TIME_ZONE = 'UTC'
 
 USE_I18N = True
 
-USE_L10N = True
-
 USE_TZ = True
 
 # Static files
@@ -213,7 +206,7 @@ SERVER_EMAIL = "Bear Blog Admin <no-reply@mg.bearblog.dev>"
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.eu.mailgun.org'
 EMAIL_HOST_USER = 'postmaster@mg.bearblog.dev'
-EMAIL_HOST_PASSWORD = os.getenv('MAILGUN_PASSWORD', False)
+EMAIL_HOST_PASSWORD = os.getenv('MAILGUN_PASSWORD', '')
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 

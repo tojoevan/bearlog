@@ -4,21 +4,17 @@ from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
 
 from django.http import HttpResponse
-from django.db import IntegrityError, connection
+from django.db import connection
 from django.db.models import DateField, Count, Sum, Q
 from django.db.models.functions import Cast
 
 from blogs.models import Blog, Hit, Post
-from blogs.helpers import daterange, get_country, salt_and_hash
+from blogs.helpers import get_country, salt_and_hash
 
 from datetime import timedelta
 from ipaddr import client_ip
 from urllib.parse import urlparse
 import httpagentparser
-import pygal
-
-import pygal
-import djqscsv
 
 
 def get_int(value, default):
@@ -34,63 +30,6 @@ def analytics(request, id):
         blog = get_object_or_404(Blog, subdomain=id)
     else:
         blog = get_object_or_404(Blog, user=request.user, subdomain=id)
-
-    if blog.user.settings.upgraded:
-        return analytics_upgraded(request, id=id)
-
-    time_threshold = False
-    chart_data = []
-
-    days = 7
-
-    time_threshold = timezone.now() - timedelta(days=days)
-
-    posts = Post.objects.annotate(
-        hit_count=Count('hit', filter=Q(hit__created_date__gt=time_threshold))).filter(
-        blog=blog,
-        publish=True,
-    ).order_by('-hit_count', '-published_date')
-
-    hits = Hit.objects.filter(post__blog=blog, created_date__gt=time_threshold)
-
-    for single_date in daterange(timezone.now() - timedelta(days=days), timezone.now() + timedelta(days=1)):
-        chart_data.append({
-            "date": single_date.strftime("%Y-%m-%d"),
-            "hits": len(list(filter(lambda hit: hit.created_date.date() == single_date.date(), list(hits))))
-        })
-
-    unique_reads = posts.aggregate(Sum('hit_count'))
-    unique_visitors = len(hits.values('hash_id').distinct())
-
-    chart = pygal.Bar(height=300, show_legend=False)
-    mark_list = [x['hits'] for x in chart_data]
-    [x['date'] for x in chart_data]
-    chart.add('Reads', mark_list)
-    chart.x_labels = [x['date'] for x in chart_data]
-    chart_render = chart.render().decode('utf-8')
-
-    return render(request, 'dashboard/analytics.html', {
-        'unique_reads': unique_reads,
-        'unique_visitors': unique_visitors,
-        'posts': posts,
-        'blog': blog,
-        'chart': chart_render
-    })
-
-
-@login_required
-def analytics_upgraded(request, id):
-    if request.user.is_superuser:
-        blog = get_object_or_404(Blog, subdomain=id)
-    else:
-        blog = get_object_or_404(Blog, user=request.user, subdomain=id)
-
-    if not blog.user.settings.upgraded:
-        return redirect('analytics', id=blog.subdomain)
-
-    if request.GET.get('export', False):
-        hits = Hit.objects.filter(post__blog=blog).order_by('created_date')
-        return djqscsv.render_to_csv_response(hits)
 
     return render_analytics(request, blog)
 
@@ -113,23 +52,32 @@ def render_analytics(request, blog, public=False):
     if referrer_filter:
         base_hits = base_hits.filter(referrer=referrer_filter)
 
-    hits = base_hits.order_by('created_date')
-    start_date = hits.first().created_date.date() if hits.exists() else start_date
+    hits = base_hits
 
-    unique_reads = base_hits.count()
-    unique_visitors = base_hits.values('hash_id').distinct().count()
-    on_site = hits.filter(created_date__gt=now-timedelta(minutes=4)).count()
-
-    # Build chart data
+    # Chart data query — also derives unique_reads, unique_visitors, and min_date
+    # Since hash_id = sha256(IP + date + SALT), hash_ids are unique per day,
+    # so summing daily COUNT(DISTINCT hash_id) equals the global distinct count.
     hit_dict = hits.annotate(
         date=Cast('created_date', output_field=DateField())
     ).values('date').annotate(
-        c=Count('date')
+        c=Count('date'),
+        v=Count('hash_id', distinct=True)
     ).order_by('date')
+
+    hit_date_count = {}
+    unique_reads = 0
+    unique_visitors = 0
+    for hit in hit_dict:
+        hit_date_count[hit['date']] = hit['c']
+        unique_reads += hit['c']
+        unique_visitors += hit['v']
+
+    if hit_date_count:
+        start_date = min(hit_date_count.keys())
+    on_site = hits.filter(created_date__gt=now-timedelta(minutes=4)).count()
 
     chart_data = []
     date_range = [start_date + timedelta(days=x) for x in range((end_date - start_date).days + 1)]
-    hit_date_count = {hit['date']: hit['c'] for hit in hit_dict}
 
     for date in date_range:
         date_str = date.strftime('%Y-%m-%d')
@@ -165,42 +113,40 @@ def render_analytics(request, blog, public=False):
 
 def get_posts(blog_id, start_date, post_filter=None, referrer_filter=None):
     with connection.cursor() as cursor:
-        # Get homepage hits
         cursor.execute("""
-            SELECT 'Home' as title,
-                   0 as upvotes,
-                   NULL as published_date,
-                   'homepage' as slug,
-                   (SELECT COUNT(h.id)
-                    FROM blogs_hit h
-                    WHERE h.blog_id = %s
-                    AND h.post_id IS NULL
-                    AND h.created_date > %s
-                    AND (h.referrer = %s OR %s IS NULL)) AS hit_count
-            WHERE (%s = 'homepage' OR %s IS NULL)
-            
-            UNION ALL
-            
+            WITH hit_counts AS (
+                SELECT post_id, COUNT(*) as hit_count
+                FROM blogs_hit
+                WHERE blog_id = %s
+                AND created_date > %s
+                AND (referrer = %s OR %s IS NULL)
+                GROUP BY post_id
+            )
             SELECT p.title,
                    p.upvotes,
                    p.published_date,
                    p.slug,
-                   (SELECT COUNT(h.id)
-                    FROM blogs_hit h
-                    WHERE h.blog_id = %s
-                    AND h.post_id = p.id
-                    AND h.created_date > %s
-                    AND (h.referrer = %s OR %s IS NULL)) AS hit_count
+                   COALESCE(hc.hit_count, 0) as hit_count
             FROM blogs_post p
+            LEFT JOIN hit_counts hc ON hc.post_id = p.id
             WHERE p.blog_id = %s
             AND p.publish
             AND (p.slug = %s OR %s IS NULL)
+
+            UNION ALL
+
+            SELECT 'Home' as title,
+                   0 as upvotes,
+                   NULL as published_date,
+                   'homepage' as slug,
+                   COALESCE((SELECT hit_count FROM hit_counts WHERE post_id IS NULL), 0)
+            WHERE (%s = 'homepage' OR %s IS NULL)
+
             ORDER BY hit_count DESC, published_date DESC
         """, [
             blog_id, start_date, referrer_filter or None, referrer_filter or None,
-            post_filter or None, post_filter or None,
-            blog_id, start_date, referrer_filter or None, referrer_filter or None,
-            blog_id, post_filter or None, post_filter or None
+            blog_id, post_filter or None, post_filter or None,
+            post_filter or None, post_filter or None
         ])
         columns = ['title', 'upvotes', 'published_date', 'slug', 'hit_count']
         posts = [dict(zip(columns, row)) for row in cursor.fetchall()]
@@ -245,8 +191,8 @@ def hit(request):
             except Hit.MultipleObjectsReturned:
                 pass
 
-        response = HttpResponse("Logged hit")
+        response = HttpResponse("Logged hit", content_type='text/plain')
         response['X-Robots-Tag'] = 'noindex, nofollow'
         return response
-    
-    return HttpResponse('Forbidden', status=403)
+
+    return HttpResponse('Forbidden', status=403, content_type='text/plain')

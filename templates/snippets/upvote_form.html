@@ -5,27 +5,31 @@
 
         <button
             class="upvote-button"
+            aria-label="Toast this post"
             title="Toast this post"
         >
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" class="css-i6dzq1">
+            <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" class="css-i6dzq1">
                 <polyline points="17 11 12 6 7 11"></polyline>
                 <polyline points="17 18 12 13 7 18"></polyline>
             </svg>
-            <small class="upvote-count">&nbsp;</small>
+            <small class="upvote-count" aria-hidden="true">&nbsp;</small>
         </button>
     </small>        
 </form>
 
 <script>
     const $upvoteButton = document.querySelector('.upvote-button');
+    const $upvoteCount =  document.querySelector('.upvote-count')
 
     fetch('/upvote-info/{{ post.uid }}/').then(response => response.json()).then(data => {
-        document.querySelector('.upvote-count').innerText = data.upvote_count;
+        $upvoteCount.innerText = data.upvote_count;
         if (data.upvoted) {
             $upvoteButton.disabled = true
             $upvoteButton.style.color = "salmon"
+            $upvoteButton.ariaLabel = "Toasted"
             $upvoteButton.title = "Toasted"
         }
+        $upvoteButton.ariaLabel += ` (${data.upvote_count})`
     });
 
     let moved = false;
@@ -51,8 +55,10 @@
         
         $upvoteButton.disabled = true
         $upvoteButton.style.color = "salmon"
+        $upvoteButton.ariaLabel = "Toasted"
         $upvoteButton.title = "Toasted"
-        const upvoteCount = document.querySelector('.upvote-count')
-        upvoteCount.innerHTML = `${(parseInt(upvoteCount.innerHTML.split(" ")[0]) + 1)}`
+        const newUpvoteCount = `${(parseInt($upvoteCount.innerHTML.split(" ")[0]) + 1)}`
+        $upvoteCount.innerHTML = newUpvoteCount
+        $upvoteButton.ariaLabel += ` (${newUpvoteCount})`
     });
 </script>

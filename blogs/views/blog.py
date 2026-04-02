@@ -4,16 +4,11 @@ from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
 from django.core.cache import cache
 from django.core.exceptions import ObjectDoesNotExist
-
 from blogs.models import Blog, Post, Upvote
 from blogs.helpers import salt_and_hash, unmark
 from blogs.views.analytics import render_analytics
 
 import os
-import tldextract
-import json
-import base64
-
 def resolve_address(request):
     http_host = request.get_host()
 
@@ -22,14 +17,15 @@ def resolve_address(request):
     if any(http_host == site for site in sites):
         # Homepage
         return None
-    elif any(site in http_host for site in sites):
-        # Subdomained blog
-        subdomain = tldextract.extract(http_host).subdomain.lower()
 
-        return get_object_or_404(Blog.objects.select_related('user').select_related('user__settings'), subdomain=subdomain, user__is_active=True)
-    else:
-        # Custom domain blog
-        return get_blog_with_domain(http_host)
+    for site in sites:
+        if http_host.endswith('.' + site):
+            # Subdomained blog
+            subdomain = http_host[:-(len(site) + 1)].lower()
+            return get_object_or_404(Blog.objects.select_related('user').select_related('user__settings'), subdomain=subdomain, user__is_active=True)
+
+    # Custom domain blog
+    return get_blog_with_domain(http_host)
 
 
 def get_blog_with_domain(domain):
@@ -45,6 +41,7 @@ def get_blog_with_domain(domain):
         return Blog.objects.select_related('user').select_related('user__settings').get(pk=pk, user__is_active=True)
     except ObjectDoesNotExist:
         raise Http404
+
 
 def get_domain_id(check):
     if not check:
@@ -72,17 +69,17 @@ def ping(request):
     domain = request.GET.get("domain", None)
 
     if not domain:
-        return HttpResponse('Invalid domain', status=422)
-    
+        return HttpResponse('Invalid domain', status=422, content_type='text/plain')
+
     try:
         if get_domain_id(domain):
             # print('Ping! Found correct blog. Issuing certificate for', domain)
-            return HttpResponse('Ping', status=200)
+            return HttpResponse('Ping', status=200, content_type='text/plain')
     except:
         pass
 
     # print("Ping! Invalid domain", domain)
-    return HttpResponse('Invalid domain', status=422)
+    return HttpResponse('Invalid domain', status=422, content_type='text/plain')
 
 
 def home(request):
@@ -128,20 +125,21 @@ def posts(request, blog):
         is_page=False
     ).order_by('-published_date')
     
-    if tags:
-        # Filter posts that contain ALL specified tags
-        posts = [post for post in posts if all(tag in post.tags for tag in tags)]
+    include_tags = [t for t in tags if not t.startswith('-')]
+    exclude_tags = [t[1:] for t in tags if t.startswith('-') and len(t) > 1]
+
+    if include_tags or exclude_tags:
+        posts = [post for post in posts if
+            all(t in post.tags for t in include_tags) and
+            not any(t in post.tags for t in exclude_tags)]
         available_tags = set()
         for post in posts:
             available_tags.update(post.tags)
     else:
         available_tags = set(blog.tags)
-    
-    # Prepare tags for JavaScript rendering
+
     # Only include tags that aren't already active and are available
-    tags_to_show = [tag for tag in blog.tags if tag not in tags and tag in available_tags]
-    tags_json = base64.b64encode(json.dumps(tags_to_show).encode()).decode()
-    active_tags_str = ','.join(tags) if tags else ''
+    tags_to_show = [tag for tag in blog.tags if tag not in tags and tag not in exclude_tags and tag in available_tags]
     
     meta_description = blog.meta_description or unmark(blog.content)[:157] + '...'
     blog_path_title = blog.blog_path.replace('-', ' ').capitalize() or 'Blog'
@@ -157,8 +155,7 @@ def posts(request, blog):
             'active_tags': tags,
             'available_tags': available_tags,
             'blog_path_title': blog_path_title,
-            'tags_json': tags_json,
-            'active_tags_str': active_tags_str,
+            'tags_to_show': tags_to_show,
         }
     )
     
@@ -168,9 +165,6 @@ def posts(request, blog):
 
 
 def post(request, slug):
-    # Prevent null characters in path
-    slug = slug.replace('\x00', '')
-
     if slug[0] == '/' and slug[-1] == '/':
         slug = slug[1:-1]
 
@@ -257,11 +251,11 @@ def upvote(request):
         except Upvote.MultipleObjectsReturned:
             print("Not upvoting: Duplicate upvote")
 
-        response = HttpResponse(f'Upvoted {post.title}')
+        response = HttpResponse(f'Upvoted {post.title}', content_type='text/plain')
         response['X-Robots-Tag'] = 'noindex, nofollow'
         return response
 
-    return HttpResponse('Forbidden', 403)
+    return HttpResponse('Forbidden', status=403, content_type='text/plain')
 
 
 def public_analytics(request):
@@ -306,6 +300,7 @@ def robots(request):
     return response
 
 
+
 def favicon(request):
     blog = resolve_address(request)
 
@@ -314,4 +309,6 @@ def favicon(request):
 
     if '.ico' in request.path:
         return redirect('/static/favicon.ico', permanent=True)
-    return redirect('/static/logo.png', permanent=True)
+    if 'apple-touch-icon' in request.path:
+        return redirect('/static/favicon.png', permanent=True)
+    return redirect('/static/favicon.svg', permanent=True)

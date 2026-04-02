@@ -1,24 +1,21 @@
 from django.conf import settings
+from django.core.cache import cache
 from django.utils import timezone
 from django.contrib.admin.views.decorators import staff_member_required
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.template.loader import render_to_string
-from django.db.models import Q, F, Count
-from django.db.models.functions import Length, TruncWeek, TruncDate, TruncMonth, Length
+from django.db.models import Q, F, Count, Max
+from django.db.models.functions import Greatest, Length, TruncWeek, TruncDate, TruncMonth
 from django.shortcuts import get_object_or_404, redirect, render
 from django.contrib.auth.models import User
 from django.contrib.admin.views.decorators import staff_member_required
 from django.shortcuts import render
 
-from blogs.helpers import send_async_mail
-from blogs.models import Blog, PersistentStore, Post
-from blogs.middleware import request_metrics, redis_client
+from blogs.helpers import send_async_mail, check_connection
+from blogs.models import Blog, PersistentStore, Post, UserSettings
 
-from statistics import mean
 from datetime import timedelta
 from dateutil.relativedelta import relativedelta
-import pygal
-from pygal.style import LightColorizedStyle
 import json
 import os
 from datetime import datetime
@@ -74,16 +71,10 @@ def dashboard(request):
             p_str = signup['p'].strftime("%Y-%m-%d")
             if p_str in user_dict:
                 user_dict[p_str] = signup['c']
-    # Generate chart
-    chart_data = []
+    # Generate chart data
+    signup_chart_data = []
     for date, count in user_dict.items():
-        chart_data.append({'date': date, 'signups': count})
-    chart = pygal.Bar(height=300, show_legend=False, style=LightColorizedStyle)
-    chart.force_uri_protocol = 'http'
-    mark_list = [x['signups'] for x in chart_data]
-    chart.add('Signups', mark_list)
-    chart.x_labels = [label_format(x['date']) for x in chart_data]
-    signup_chart = chart.render_data_uri()
+        signup_chart_data.append({'date': date, 'count': count})
     # Upgrades
     upgraded_users = User.objects.filter(settings__upgraded=True, settings__upgraded_date__gte=start_date).order_by('settings__upgraded_date')
     upgrades_count = upgraded_users.annotate(p=trunc('settings__upgraded_date')).values('p').annotate(c=Count('id')).order_by('p')
@@ -99,16 +90,10 @@ def dashboard(request):
             p_str = upgrade['p'].strftime("%Y-%m-%d")
             if p_str in user_dict:
                 user_dict[p_str] = upgrade['c']
-    # Generate chart
-    chart_data = []
+    # Generate chart data
+    upgrade_chart_data = []
     for date, count in user_dict.items():
-        chart_data.append({'date': date, 'upgrades': count})
-    chart = pygal.Bar(height=300, show_legend=False, style=LightColorizedStyle)
-    chart.force_uri_protocol = 'http'
-    mark_list = [x['upgrades'] for x in chart_data]
-    chart.add('Upgrades', mark_list)
-    chart.x_labels = [label_format(x['date']) for x in chart_data]
-    upgrade_chart = chart.render_data_uri()
+        upgrade_chart_data.append({'date': date, 'count': count})
     # Calculate signups and upgrades for the period
     signups = users.count()
     upgrades = User.objects.filter(settings__upgraded=True, settings__upgraded_date__gte=start_date).count()
@@ -121,7 +106,6 @@ def dashboard(request):
     formatted_conversion_rate = f"{conversion_rate*100:.2f}%"
     formatted_total_conversion_rate = f"{total_conversion_rate*100:.2f}%"
 
-    new_upgrades_count = new_upgrades().count()
     return render(
         request,
         'staff/dashboard.html',
@@ -132,15 +116,14 @@ def dashboard(request):
             'total_upgrades': total_upgrades,
             'conversion_rate': formatted_conversion_rate,
             'total_conversion_rate': formatted_total_conversion_rate,
-            'signup_chart': signup_chart,
-            'upgrade_chart': upgrade_chart,
+            'signup_chart_data': json.dumps(signup_chart_data),
+            'upgrade_chart_data': json.dumps(upgrade_chart_data),
             'start_date': start_date,
             'end_date': end_date,
             'opt_in_blogs_count': opt_in_blogs_count,
             'dodgy_blogs_count': dodgy_blogs_count,
             'flagged_blogs_count': flagged_blogs_count,
             'new_blogs_count': new_blogs_count,
-            'new_upgrades_count': new_upgrades_count,
             'empty_blogs': all_empty_blogs,
             'days_filter': days_filter,
             'period': period,
@@ -178,46 +161,253 @@ def new_upgrades():
         )
     return upgraded_users
 
-@staff_member_required
-def email_new_upgrades(request):
-    upgraded_users = new_upgrades()
 
-    for user in upgraded_users:
-        send_async_mail(
-            "You upgraded!",
-            render_to_string('emails/upgraded.html'),
-            'Herman Martinus <herman@mg.bearblog.dev>',
-            [user.email],
-            ['Herman Martinus <herman@bearblog.dev>'],
+def blogs_with_orphaned_domains():
+    return Blog.objects.filter(
+        domain__isnull=False,
+        user__settings__upgraded=False,
+        user__settings__orphaned_domain_warning_email_sent__isnull=True,
+    ).exclude(domain='').select_related('user', 'user__settings')
+
+
+def monthly_users_to_upgrade():
+    earliest = timezone.now() - timedelta(days=150)  # ~5 months
+    latest = timezone.now() - timedelta(days=60)  # ~2 months
+    return UserSettings.objects.filter(
+        upgraded=True,
+        plan_type='monthly',
+        upgraded_date__range=(earliest, latest),
+        upgrade_nudge_email_sent__isnull=True,
+    ).select_related('user')
+
+
+def free_users_to_nudge():
+    two_months_ago = timezone.now() - timedelta(days=60)
+    three_days_ago = timezone.now() - timedelta(days=3)
+    return User.objects.filter(
+        date_joined__lte=two_months_ago,
+        settings__upgraded=False,
+        settings__contribution_nudge_email_sent__isnull=True,
+    ).filter(
+        Q(blogs__last_posted__gte=three_days_ago) |
+        Q(blogs__last_modified__gte=three_days_ago)
+    ).distinct().select_related('settings').annotate(
+        latest_activity=Greatest(
+            Max('blogs__last_posted'),
+            Max('blogs__last_modified'),
         )
-        user.settings.upgraded_email_sent = True
-        user.settings.save()
-    return HttpResponse(f"Emailed {upgraded_users.count()} new upgrades.")
+    )
+
+
+@staff_member_required
+def actions(request):
+    upgraded_users = list(new_upgrades().select_related('settings'))
+    nudge_users = list(monthly_users_to_upgrade())
+    contribution_nudge_users = list(free_users_to_nudge())
+    orphaned_blogs = list(blogs_with_orphaned_domains())
+    for blog in orphaned_blogs:
+        blog.is_connected = check_connection(blog)
+    cutoff = timezone.now() - timedelta(days=14)
+    overdue_blogs = list(Blog.objects.filter(
+        user__settings__upgraded=False,
+        user__settings__orphaned_domain_warning_email_sent__lte=cutoff,
+    ).exclude(domain='').exclude(domain__isnull=True).select_related('user', 'user__settings'))
+
+    # Group orphaned blogs by user
+    orphaned_by_user = {}
+    disconnected_count = 0
+    for blog in orphaned_blogs:
+        orphaned_by_user.setdefault(blog.user, []).append(blog)
+        if not blog.is_connected:
+            disconnected_count += 1
+
+    result = None
+    if request.method == 'POST':
+        action = request.POST.get('action')
+
+        if action == 'email_new_upgrades':
+            count = 0
+            for user in upgraded_users:
+                send_async_mail(
+                    "You upgraded!",
+                    render_to_string('emails/upgraded.html'),
+                    'Herman Martinus <herman@mg.bearblog.dev>',
+                    [user.email],
+                    ['Herman Martinus <herman@bearblog.dev>'],
+                )
+                user.settings.upgraded_email_sent = True
+                user.settings.save()
+                count += 1
+            result = f"Emailed {count} new upgrades."
+            upgraded_users = list(new_upgrades().select_related('settings'))
+
+        elif action == 'email_nudge_monthly':
+            count = 0
+            for user_settings in nudge_users:
+                send_async_mail(
+                    "Your subscription",
+                    render_to_string('emails/upgrade_from_monthly.html'),
+                    'Herman Martinus <herman@mg.bearblog.dev>',
+                    [user_settings.user.email],
+                    ['Herman Martinus <herman@bearblog.dev>'],
+                )
+                user_settings.upgrade_nudge_email_sent = timezone.now()
+                user_settings.save()
+                count += 1
+            result = f"Emailed {count} monthly users to upgrade."
+            nudge_users = list(monthly_users_to_upgrade())
+
+        elif action == 'email_domain_warnings':
+            count = 0
+            for user, user_blogs in list(orphaned_by_user.items()):
+                send_async_mail(
+                    "Your custom domain",
+                    render_to_string('emails/domain_warning.html', {'blogs': user_blogs}),
+                    'Herman Martinus <herman@mg.bearblog.dev>',
+                    [user.email],
+                    ['Herman Martinus <herman@bearblog.dev>'],
+                )
+                user.settings.orphaned_domain_warning_email_sent = timezone.now()
+                user.settings.save()
+                count += 1
+            result = f"Emailed {count} users about orphaned domains."
+            orphaned_blogs = list(blogs_with_orphaned_domains())
+            for blog in orphaned_blogs:
+                blog.is_connected = check_connection(blog)
+            orphaned_by_user = {}
+            disconnected_count = 0
+            for blog in orphaned_blogs:
+                orphaned_by_user.setdefault(blog.user, []).append(blog)
+                if not blog.is_connected:
+                    disconnected_count += 1
+
+        elif action == 'remove_disconnected_domains':
+            count = 0
+            for blog in orphaned_blogs:
+                if not blog.is_connected:
+                    blog.domain = ''
+                    blog.save()
+                    count += 1
+            if count:
+                cache.delete('domain_map')
+            result = f"Removed {count} disconnected domains."
+            orphaned_blogs = list(blogs_with_orphaned_domains())
+            for blog in orphaned_blogs:
+                blog.is_connected = check_connection(blog)
+            orphaned_by_user = {}
+            disconnected_count = 0
+            for blog in orphaned_blogs:
+                orphaned_by_user.setdefault(blog.user, []).append(blog)
+                if not blog.is_connected:
+                    disconnected_count += 1
+
+        elif action == 'email_contribution_nudge':
+            count = 0
+            for user in contribution_nudge_users:
+                send_async_mail(
+                    "Your support",
+                    render_to_string('emails/contribution_nudge.html'),
+                    'Herman Martinus <herman@mg.bearblog.dev>',
+                    [user.email],
+                    ['Herman Martinus <herman@bearblog.dev>'],
+                )
+                user.settings.contribution_nudge_email_sent = timezone.now()
+                user.settings.save()
+                count += 1
+            result = f"Emailed {count} free users about contributing."
+            contribution_nudge_users = list(free_users_to_nudge())
+
+        elif action == 'remove_orphaned_domains':
+            count = 0
+            for blog in overdue_blogs:
+                blog.domain = ''
+                blog.save()
+                blog.user.settings.orphaned_domain_warning_email_sent = None
+                blog.user.settings.save()
+                count += 1
+            if count:
+                cache.delete('domain_map')
+            result = f"Removed domains from {count} blogs."
+            overdue_blogs = list(Blog.objects.filter(
+                user__settings__upgraded=False,
+                user__settings__orphaned_domain_warning_email_sent__lte=cutoff,
+            ).exclude(domain='').exclude(domain__isnull=True).select_related('user', 'user__settings')[:20])
+
+    return render(request, 'staff/actions.html', {
+        'upgraded_users': upgraded_users,
+        'nudge_users': nudge_users,
+        'orphaned_blogs': orphaned_blogs,
+        'orphaned_by_user': orphaned_by_user,
+        'overdue_blogs': overdue_blogs,
+        'contribution_nudge_users': contribution_nudge_users,
+        'disconnected_count': disconnected_count,
+        'result': result,
+    })
 
 
 @staff_member_required
 def check_spam(request):
     if request.method == "POST":
-        query = request.POST.get('query')
+        query = request.POST.get('query', '').strip()
 
         if not query:
-            return HttpResponse("Either email or subdomain must be provided.")
-        
+            return JsonResponse({'error': 'Either email or subdomain must be provided.'}, status=400)
+
+        # Clean subdomain input: strip protocol and .bearblog.dev suffix
+        cleaned = query.lower()
+        for prefix in ['https://', 'http://']:
+            if cleaned.startswith(prefix):
+                cleaned = cleaned[len(prefix):]
+        cleaned = cleaned.rstrip('/')
+        for suffix in ['.bearblog.dev', '.lh.co']:
+            if cleaned.endswith(suffix):
+                cleaned = cleaned[:-len(suffix)]
+
+        # Look up by email first, then by cleaned subdomain
         user = User.objects.filter(email=query).first()
         if user:
             blog = user.blogs.first()
         else:
-            blog = Blog.objects.filter(subdomain=query).first()
-        
-        if not user and not blog:
-            return HttpResponse("User or blog not found.")
-        
-        if request.POST.get('unblock'):
-            blog.user.is_active = True
-            blog.user.save()
-            return redirect(blog.useful_domain)
+            blog = Blog.objects.filter(subdomain=cleaned).first()
 
-        return redirect(f"{blog.useful_domain}")
+        if not blog:
+            return JsonResponse({'error': 'Blog not found.'}, status=404)
+
+        posts = []
+        for post in blog.posts.all().order_by('-published_date'):
+            posts.append({
+                'title': post.title,
+                'slug': post.slug,
+                'published_date': post.published_date.isoformat() if post.published_date else None,
+                'content': post.content,
+                'make_discoverable': post.make_discoverable,
+            })
+
+        data = {
+            'title': blog.title,
+            'subdomain': blog.subdomain,
+            'domain': blog.domain or '',
+            'email': blog.user.email,
+            'useful_domain': blog.useful_domain,
+            'bear_domain': blog.bear_domain,
+            'created_date': blog.created_date.isoformat(),
+            'last_modified': blog.last_modified.isoformat(),
+            'last_posted': blog.last_posted.isoformat() if blog.last_posted else None,
+            'upgraded': blog.user.settings.upgraded,
+            'is_active': blog.user.is_active,
+            'reviewed': blog.reviewed,
+            'flagged': blog.flagged,
+            'hidden': blog.hidden,
+            'dodginess_score': blog.dodginess_score,
+            'reviewer_note': blog.reviewer_note,
+            'robots_txt': blog.robots_txt,
+            'content': blog.content,
+            'posts': posts,
+            'admin_usersettings_url': f'/mothership/blogs/usersettings/{blog.user.settings.pk}/change/',
+            'admin_blog_url': f'/mothership/blogs/blog/{blog.pk}/change/',
+        }
+
+        return JsonResponse(data)
 
 
 @staff_member_required  
@@ -359,14 +549,6 @@ def delete_empty(request):
         blog.delete()
 
     return redirect('staff_dashboard')
-
-def recent_upgrades():
-    timeperiod = timezone.now() - timedelta(days=1)
-    blogs = blogs = Blog.objects.filter(
-        user__settings__upgraded=True,
-        user__settings__upgraded_date__gt=timeperiod
-    ).prefetch_related('user__settings')
-    return blogs
 
 
 def empty_blogs():
@@ -568,50 +750,7 @@ def migrate_blog(request):
             message += 'Deleted...\n'
         
         return HttpResponse(message)
-    
 
-@staff_member_required
-def performance_dashboard(request):
-    metrics_summary = {}
-    
-    if redis_client:
-        # Get metrics from Redis
-        for key in redis_client.keys('request_metrics:*'):
-            endpoint = key.decode('utf-8').split(':')[1]
-            measurements = json.loads(redis_client.get(key))
-            
-            if measurements:
-                metrics_summary[endpoint] = calculate_metrics_summary(measurements)
-    else:
-        # Get metrics from in-memory storage
-        for endpoint, measurements in request_metrics.items():
-            if measurements:
-                metrics_summary[endpoint] = calculate_metrics_summary(measurements)
-    
-    # Sort metrics by average total time (descending)
-    sorted_metrics = dict(sorted(
-        metrics_summary.items(),
-        key=lambda x: x[1]['avg_total'],
-        reverse=True
-    ))
-    
-    return render(request, 'staff/performance.html', {
-        'metrics': sorted_metrics
-    })
-
-def calculate_metrics_summary(measurements):
-    """Helper function to calculate metrics summary"""
-    return {
-        'count': len(measurements),
-        'avg_total': mean(m['total_time'] for m in measurements) * 1000,
-        'avg_db': mean(m['db_time'] for m in measurements) * 1000,
-        'avg_compute': mean(m['compute_time'] for m in measurements) * 1000,
-        'max_total': max(m['total_time'] for m in measurements) * 1000,
-        'max_db': max(m['db_time'] for m in measurements) * 1000,
-        'max_compute': max(m['compute_time'] for m in measurements) * 1000,
-        'db_percent': (mean(m['db_time'] for m in measurements)) / (mean(m['total_time'] for m in measurements)) * 100,
-        'compute_percent': 100 - (mean(m['db_time'] for m in measurements)) / (mean(m['total_time'] for m in measurements)) * 100,
-    }
 
 # Playground for testing
 

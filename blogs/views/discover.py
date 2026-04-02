@@ -1,19 +1,16 @@
 from django.http.response import HttpResponse
-from django.shortcuts import get_object_or_404
-from django.shortcuts import render
-from django.views.decorators.csrf import csrf_exempt
-from django.db.models import Q
+from django.shortcuts import render, redirect
+from django.db.models import Q, Max, Min
 from django.utils import timezone
 from django.db.models.functions import Length
+from django.contrib.postgres.search import SearchQuery
 
-from blogs.models import Blog, Post, Upvote
-from blogs.helpers import clean_text, salt_and_hash, unmark
-from blogs.views.analytics import render_analytics
+from blogs.models import Post, Blog
+from blogs.helpers import clean_text, random_post_link, random_blog_link
+from blogs.templatetags.custom_tags import markdown, plain_title
 
+import random
 from feedgen.feed import FeedGenerator
-import tldextract
-import mistune
-import os
 
 posts_per_page = 20
 
@@ -78,34 +75,39 @@ def admin_actions(request):
         if request.POST.get("set-values", False):
             post = Post.objects.get(pk=request.POST.get("set-values"))
             post.shadow_votes = int(request.POST.get("shadow-votes"))
-            post.lang = request.POST.get('lang')
+            post.lang = request.POST.get('post-lang')
             post.save()
+
+            if post.blog.lang != request.POST.get('blog-lang'):
+                post.blog.lang = request.POST.get('blog-lang')
+                post.blog.save()
+
         
 
 
-@csrf_exempt
 def discover(request):
     admin_actions(request)
 
-    blog = resolve_address(request)
-    if blog:
-        all_posts = blog.posts.filter(publish=True, published_date__lte=timezone.now(), is_page=False).order_by('-published_date')
-        meta_description = blog.meta_description or unmark(blog.content)[:157] + '...'
-    
-        response = render(
-            request,
-            'home.html',
-            {
-                'blog': blog,
-                'posts': all_posts,
-                'meta_description': meta_description
-            }
-        )
+    # Handle hide/unhide actions
+    if request.method == 'POST':
+        subdomain = request.POST.get('subdomain')
+        action = request.POST.get('action')  # 'hide' or 'unhide'
 
-        response['Cache-Tag'] = blog.subdomain
-        response['Cache-Control'] = "public, s-maxage=43200, max-age=0"
-
-        return response
+        if subdomain:
+            if request.user.is_authenticated:
+                # Update user settings
+                hide_list = request.user.settings.discovery_hide_list or []
+                
+                if action == 'hide' and subdomain not in hide_list:
+                    hide_list.append(subdomain)
+                elif action == 'unhide' and subdomain in hide_list:
+                    hide_list.remove(subdomain)
+                
+                request.user.settings.discovery_hide_list = hide_list
+                request.user.settings.save()
+                
+                # Redirect to same page to prevent resubmission
+                return redirect(request.get_full_path())
 
     try:
         page = int(request.GET.get("page", 0) or 0)
@@ -116,21 +118,18 @@ def discover(request):
     posts_to = (page * posts_per_page) + posts_per_page
 
     newest = request.GET.get("newest")
+    random_feed = request.GET.get("random")
 
     base_query = get_base_query(request.user)
-
-    hide_list_raw = request.COOKIES.get('hide_list', '').strip()
-
-    if hide_list_raw:
-        hide_list_raw = ','.join(x for x in hide_list_raw.split(',') if x.strip())
-        hide_list_raw = hide_list_raw.replace(' ', ',').replace('https://', '').replace('http://', '')
-        
-        hide_list = hide_list_raw.replace(f".{os.getenv('MAIN_SITE_HOSTS').split(',')[0]}", '').split(',')
-        hide_list = [x.split('/')[0] for x in hide_list if x.strip()]
-        print("Hide list:", hide_list)
-        hide_list_raw = ','.join(hide_list)
-
-        base_query = base_query.exclude(blog__subdomain__in=hide_list).exclude(blog__domain__in=hide_list)
+    
+    # Get blog objects for display
+    hide_list = None
+    if request.user.is_authenticated:
+        hide_list_subdomains = request.user.settings.discovery_hide_list or []
+        hide_list = Blog.objects.filter(subdomain__in=hide_list_subdomains)
+        # Exclude hidden blogs from query
+        if hide_list:
+            base_query = base_query.exclude(blog__in=hide_list)
 
     lang = request.COOKIES.get('lang')
 
@@ -140,12 +139,35 @@ def discover(request):
             (Q(lang='') & Q(blog__lang__startswith=lang) & ~Q(blog__lang=''))
         )
 
-    if newest:
+    if random_feed:
+        probe_langs = {'en', 'pt', 'es', 'zh', 'fr', 'de'}
+        use_probes = not lang or lang in probe_langs
+
+        if use_probes:
+            # Fast path: random ID probes for common languages.
+            agg = Post.objects.aggregate(max_id=Max('id'), min_id=Min('id'))
+            results = []
+            found_ids = set()
+            if agg['max_id']:
+                for _ in range(posts_per_page * 10):
+                    rand_id = random.randint(agg['min_id'], agg['max_id'])
+                    post = base_query.filter(id__gte=rand_id).first()
+                    if post and post.id not in found_ids:
+                        found_ids.add(post.id)
+                        results.append(post)
+                    if len(results) >= posts_per_page:
+                        break
+            posts = results
+        else:
+            # Slow fallback: ORDER BY random() for rare languages where probes have too low a hit rate
+            posts = list(base_query.order_by('?')[:posts_per_page])
+    elif newest:
         posts = base_query.order_by("-published_date")
     else:
         posts = base_query.order_by("-score")
 
-    posts = posts[posts_from:posts_to]
+    if not random_feed:
+        posts = posts[posts_from:posts_to]
 
     return render(request, "index.html", {
         "lang": lang,
@@ -155,12 +177,13 @@ def discover(request):
         "next_page": page + 1,
         "posts_from": posts_from,
         "newest": newest,
-        "hide_list_cookie": hide_list_raw.split(',') if hide_list_raw else None,
+        "random": random_feed,
+        "hide_list": hide_list
     })
 
 
 def get_available_languages():
-    return ["cs", "de", "el", "en", "es", "fi", "fr", "hu", "id", "it", "ja", "ko", "nl", "pl", "pt", "ru", "sv", "tr", "zh"]
+    return ["cs", "de", "el", "en", "es", "fi", "fr", "hu", "id", "it", "ja", "ko", "nl", "pl", "pt", "ru", "sv", "tr", "uk", "zh"]
 
 
 # RSS/Atom feed
@@ -205,12 +228,12 @@ def feed(request):
     for post in all_posts:
         fe = fg.add_entry()
         fe.id(f"{post.blog.useful_domain}/{post.slug}/")
-        fe.title(post.title)
+        fe.title(plain_title(post.title))
         fe.author({"name": post.blog.subdomain, "email": "hidden"})
         fe.link(href=f"{post.blog.useful_domain}/{post.slug}/")
+        post_content = post.content.replace("{{ email-signup }}", '')
         fe.content(
-            clean_text(mistune.html(post.content.replace("{{ email-signup }}", ''))),
-            # clean_text(mistune.html(post.content.replace("{{ email_signup }}", ''))),
+            clean_text(markdown(post_content, post.blog, post)),
             type="html"
         )
         fe.published(post.published_date)
@@ -223,20 +246,42 @@ def feed(request):
 
 
 def search(request):
-    search_string = request.POST.get('query', "") if request.method == "POST" else ""
+    search_string = request.GET.get('query', "")
     posts = None
+
+    try:
+        page = int(request.GET.get("page", 0) or 0)
+    except ValueError:
+        page = 0
+
+    posts_from = page * posts_per_page
+    posts_to = posts_from + posts_per_page
 
     if search_string:
         posts = (
             get_base_query().filter(
-                Q(title__icontains=search_string) |
-                Q(all_tags__icontains=search_string)
+                search_vector=SearchQuery(search_string, search_type='websearch')
             )
-            .order_by('-upvotes')
-            .select_related("blog")[0:20]
+            .order_by('-upvotes')[posts_from:posts_to]
         )
 
     return render(request, "search.html", {
         "posts": posts,
         "search_string": search_string,
+        "previous_page": page - 1,
+        "next_page": page + 1,
     })
+
+
+def random_post(request):
+    url = random_post_link()
+    if not url:
+        return redirect('/discover/')
+    return redirect(url)
+
+
+def random_blog(request):
+    url = random_blog_link()
+    if not url:
+        return redirect('/discover/')
+    return redirect(url)

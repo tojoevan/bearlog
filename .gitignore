@@ -108,8 +108,12 @@ venv.bak/
 
 # Sandbox
 blogs/sandbox.py
+/sandbox*
 
 # Testing tools
 fixture.json
 sync_data.sh
 *.mdc
+CLAUDE.md
+.claude*
+Caddyfile.dev

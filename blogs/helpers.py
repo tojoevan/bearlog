@@ -1,25 +1,19 @@
 from django.utils import timezone
-from django.core.mail import send_mail, get_connection, EmailMultiAlternatives
+from django.core.mail import EmailMultiAlternatives
 from django.contrib.gis.geoip2 import GeoIP2
-from django.conf import settings
-from django.db import connection
-from django.utils.text import slugify
-
+from django.db.models import Max, Min
 import re
-import string
 import os
 import random
 import threading
 from requests.exceptions import ConnectionError, ReadTimeout
 import requests
-import subprocess
-from datetime import timedelta
 from time import time
 import geoip2
 from ipaddr import client_ip
 import hashlib
 
-from blogs.models import Post
+from blogs.models import Blog, Post
 
 
 def is_protected(subdomain):
@@ -74,19 +68,13 @@ def is_protected(subdomain):
     return subdomain in protected_subdomains
 
 
-def check_records(domain):
-    if not domain:
-        return
-    verification_string = subprocess.Popen(["dig", "-t", "txt", domain, '+short'], stdout=subprocess.PIPE).communicate()[0]
-    return ('look-for-the-bear-necessities' in str(verification_string))
-
-
 def check_connection(blog):
     if not blog.domain:
         return
     else:
         try:
-            response = requests.request("GET", blog.useful_domain, allow_redirects=False, timeout=10)
+            user_agent = os.environ.get("ADMIN_USER_AGENT", "")
+            response = requests.request("GET", blog.useful_domain, headers={"User-Agent": user_agent}, allow_redirects=False, timeout=10)
             return (f'<meta name="{ blog.subdomain }" content="look-for-the-bear-necessities">' in response.text)
         except ConnectionError:
             return False
@@ -94,31 +82,6 @@ def check_connection(blog):
             return False
         except SystemExit:
             return False
-
-
-def create_cache_key(host, path=None, tag=None):
-    cache_key = host.replace('.', '_')
-    if path:
-        cache_key += f"_{path}"
-    if tag:
-        cache_key += f"_{tag}" 
-    cache_key = slugify(cache_key).replace('-', '_')
-
-    return cache_key
-
-
-def pseudo_word(length=5):
-    vowels = "aeiou"
-    consonants = "".join(set(string.ascii_lowercase) - set(vowels))
-    
-    word = ""
-    for i in range(length):
-        if i % 2 == 0:
-            word += random.choice(consonants)
-        else:
-            word += random.choice(vowels)
-    
-    return word
 
 
 def salt_and_hash(request, duration='day'):
@@ -144,19 +107,19 @@ def get_country(user_ip):
 
 
 def unmark(content):
-    content = re.sub(r'^\s{0,3}#{1,6}\s+.*$', '', content, flags=re.MULTILINE)
+    content = re.sub(r'^\s{0,3}#{1,6}\s+(.*)$', r'\1', content, flags=re.MULTILINE)
     content = re.sub(r'^\s{0,3}[-*]{3,}\s*$', '', content, flags=re.MULTILINE)
-    content = re.sub(r'^\s{0,3}>\s+.*$', '', content, flags=re.MULTILINE)
-    content = re.sub(r'```.*?```', '', content, flags=re.DOTALL)
-    content = re.sub(r'`[^`]+`', '', content)
-    content = re.sub(r'!\[.*?\]\(.*?\)', '', content)
-    content = re.sub(r'\[.*?\]\(.*?\)', '', content)
-    content = re.sub(r'(\*\*|__)(.*?)\1', '', content)
-    content = re.sub(r'(\*|_)(.*?)\1', '', content)
-    content = re.sub(r'~~.*?~~', '', content)
-    content = re.sub(r'^\s{0,3}[-*+]\s+.*$', '', content, flags=re.MULTILINE)
-    content = re.sub(r'^\s{0,3}\d+\.\s+.*$', '', content, flags=re.MULTILINE)
-    content = re.sub(r'^\s*\|.*?\|\s*$', '', content, flags=re.MULTILINE)
+    content = re.sub(r'^\s{0,3}>\s+(.*)$', r'\1', content, flags=re.MULTILINE)
+    content = re.sub(r'```(.*?)```', r'\1', content, flags=re.DOTALL)
+    content = re.sub(r'`([^`]+)`', r'\1', content)
+    content = re.sub(r'!\[(.*?)\]\(.*?\)', r'\1', content)
+    content = re.sub(r'\[(.*?)\]\(.*?\)', r'\1', content)
+    content = re.sub(r'(\*\*|__)(.*?)\1', r'\2', content)
+    content = re.sub(r'(\*|_)(.*?[^\\])\1', r'\2', content)
+    content = re.sub(r'~~(.*?)~~', r'\1', content)
+    content = re.sub(r'^\s{0,3}[-*+]\s+(.*)$', r'\1', content, flags=re.MULTILINE)
+    content = re.sub(r'^\s{0,3}\d+\.\s+(.*)$', r'\1', content, flags=re.MULTILINE)
+    content = re.sub(r'^\s*\|(.*?)\|\s*$', '\1', content, flags=re.MULTILINE)
     content = re.sub(r'^\s*[:-]{3,}\s*$', '', content, flags=re.MULTILINE)
 
     return content
@@ -175,21 +138,6 @@ def valid_xml_char_ordinal(c):
         0xE000 <= codepoint <= 0xFFFD or
         0x10000 <= codepoint <= 0x10FFFF
     )
-
-
-def daterange(start_date, end_date):
-    for n in range(int((end_date - start_date).days)):
-        yield start_date + timedelta(n)
-
-
-def send_mass_html_mail(datatuple, fail_silently=False, user=None, password=None, connection=None):
-    connection = connection or get_connection(username=user, password=password, fail_silently=fail_silently)
-    messages = []
-    for subject, text, html, from_email, recipient in datatuple:
-        message = EmailMultiAlternatives(subject, text, from_email, recipient)
-        message.attach_alternative(html, 'text/html')
-        messages.append(message)
-    return connection.send_messages(messages)
 
 
 class EmailThread(threading.Thread):
@@ -215,28 +163,66 @@ class EmailThread(threading.Thread):
 
 # Important! All members of the recipient list will see the other recipients in the 'To' field
 def send_async_mail(subject, html_message, from_email, recipient_list, reply_to=None):
-    if settings.DEBUG:
-        print(html_message)
-    else:
-        print('Sent email to ', recipient_list)
+    if os.getenv('ENVIRONMENT') == 'dev':
+        print(f'[DEV] Would send email to {recipient_list}: {subject}')
+        return
+    print('Sent email to ', recipient_list)
     EmailThread(subject, html_message, from_email, recipient_list, reply_to).start()
 
 
+_random_post_cache = {'url': '', 'expires': 0}
+_random_blog_cache = {'url': '', 'expires': 0}
+
+
+def _random_by_id(queryset, model):
+    agg = model.objects.aggregate(max_id=Max('id'), min_id=Min('id'))
+    if not agg['max_id']:
+        return None
+    for _ in range(10):
+        rand_id = random.randint(agg['min_id'], agg['max_id'])
+        obj = queryset.filter(id__gte=rand_id).first()
+        if obj:
+            return obj
+    return queryset.first()
+
+
 def random_post_link():
-    count = Post.objects.filter(
+    if time() < _random_post_cache['expires'] and _random_post_cache['url']:
+        return _random_post_cache['url']
+    post = _random_by_id(
+        Post.objects.filter(
             blog__reviewed=True,
+            blog__hidden=False,
             publish=True,
             published_date__lte=timezone.now(),
             make_discoverable=True,
-            content__isnull=False
-        ).count()
-    random_index = random.randint(0, count - 1)
-    post = Post.objects.filter(
-        blog__reviewed=True,
-        publish=True,
-        published_date__lte=timezone.now(),
-        make_discoverable=True,
-        content__isnull=False
-    )[random_index]
+            hidden=False,
+            content__isnull=False,
+        ).select_related('blog'),
+        Post,
+    )
+    if not post:
+        return ''
+    url = f"{post.blog.useful_domain}/{post.slug}"
+    _random_post_cache['url'] = url
+    _random_post_cache['expires'] = time() + 60
+    return url
 
-    return f"{post.blog.useful_domain}/{post.slug}"
+
+def random_blog_link():
+    if time() < _random_blog_cache['expires'] and _random_blog_cache['url']:
+        return _random_blog_cache['url']
+    blog = _random_by_id(
+        Blog.objects.filter(
+            reviewed=True,
+            hidden=False,
+            user__is_active=True,
+        ),
+        Blog,
+    )
+    if not blog:
+        return ''
+    url = blog.useful_domain
+    _random_blog_cache['url'] = url
+    _random_blog_cache['expires'] = time() + 60
+    return url

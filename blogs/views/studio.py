@@ -19,7 +19,7 @@ from blogs.backup import backup_in_thread
 from blogs.forms import AdvancedSettingsForm, BlogForm, DashboardCustomisationForm, PostTemplateForm
 from blogs.helpers import check_connection, is_protected, salt_and_hash
 from blogs.models import Blog, Post, Upvote
-from blogs.subscriptions import get_subscriptions
+from blogs.subscriptions import get_subscriptions, normalize_plan_type
 
 
 @login_required
@@ -49,14 +49,32 @@ def list(request):
     variant = None
     upgrade_subscription_link = None
 
-    if request.user.settings.order_id:
+    if request.user.settings.order_id and request.user.settings.plan_type != 'lifetime':
         try:
             subscription = get_subscriptions(request.user.settings.order_id)
-            if subscription:
+            if subscription and subscription['data']:
                 subscription_cancelled = subscription['data'][0]['attributes']['cancelled']
                 subscription_link = subscription['data'][0]['attributes']['urls']['customer_portal']
                 upgrade_subscription_link = subscription['data'][0]['attributes']['urls']['customer_portal_update_subscription']
                 variant = subscription['data'][0]['attributes']['variant_name']
+                status = subscription['data'][0]['attributes']['status']
+                plan_type = normalize_plan_type(variant)
+                if plan_type and request.user.settings.plan_type != plan_type:
+                    request.user.settings.plan_type = plan_type
+                    request.user.settings.save()
+
+                if status in ('expired', 'paused') and request.user.settings.upgraded:
+                    request.user.settings.upgraded = False
+                    request.user.settings.upgraded_date = None
+                    request.user.settings.order_id = None
+                    request.user.settings.plan_type = None
+                    request.user.settings.save()
+                elif status == 'active' and not request.user.settings.upgraded:
+                    request.user.settings.upgraded = True
+                    request.user.settings.save()
+            else:
+                request.user.settings.plan_type = 'lifetime'
+                request.user.settings.save()
         except Exception as e:
             print('No sub found ', e)
 
@@ -165,7 +183,7 @@ def post(request, id, uid=None):
     preview = request.POST.get("preview", False) == "true"
 
     if request.method == "POST" and header_content:
-        if blog.posts.count() >= 3000:
+        if blog.posts.count() >= 5000:
             error_messages.append("You have reached the maximum number of posts. This is a safety feature to prevent abuse. If you're sure you need more, please contact support.")
             return render(request, 'studio/post_edit.html', {
                 'blog': blog,
@@ -518,6 +536,20 @@ def custom_domain_edit(request, id):
         'blog': blog,
         'error_messages': error_messages
     })
+
+
+@login_required
+def remove_domain(request, id):
+    if request.method != 'POST':
+        return redirect('dashboard', id=id)
+    blog = get_object_or_404(Blog, user=request.user, subdomain=id)
+    blog.domain = ""
+    blog.save()
+    # Invalidate domain_map cache
+    cache.delete('domain_map')
+    blog.user.settings.orphaned_domain_warning_email_sent = None
+    blog.user.settings.save()
+    return redirect('dashboard', id=blog.subdomain)
 
 
 @login_required

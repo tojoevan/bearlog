@@ -1,6 +1,6 @@
 from django.urls import path, re_path
 
-from blogs.views import blog, dashboard, studio, feed, discover, analytics, emailer, staff, signup_flow, media
+from blogs.views import blog, dashboard, studio, feed, discover, analytics, emailer, staff, signup_flow, media, staff_api
 from blogs import subscriptions
 from conf import logger
 
@@ -27,6 +27,7 @@ urlpatterns = [
 
     # Staff dashboard
     path('staff/dashboard/', main_site_only(staff.dashboard), name='staff_dashboard'),
+    path('staff/actions/', main_site_only(staff.actions), name='staff_actions'),
     path('staff/review/new/', main_site_only(staff.review_bulk), name='review_new'),
     path('staff/review/opt-in/', main_site_only(staff.review_bulk), name='review_opt_in'),
     path('staff/review/dodgy/', main_site_only(staff.review_bulk), name='review_dodgy'),
@@ -36,64 +37,70 @@ urlpatterns = [
     path('staff/review/ignore/<pk>', main_site_only(staff.ignore), name='review_ignore'),
     path('staff/review/flag/<pk>', main_site_only(staff.flag), name='review_flag'),
     path('staff/review/delete/<pk>', main_site_only(staff.delete), name='review_delete'),
-    path('staff/dashboard/email-new-upgrades/', main_site_only(staff.email_new_upgrades), name='email_new_upgrades'),
     path('staff/dashboard/delete-empty/', main_site_only(staff.delete_empty), name='delete_empty'),
     path('staff/dashboard/migrate-blog/', main_site_only(staff.migrate_blog), name='migrate_blog'),
     path('staff/dashboard/import-posts/', main_site_only(staff.import_posts), name='import_posts'),
     path('staff/dashboard/check-spam/', main_site_only(staff.check_spam), name='check_spam'),
     path('staff/playground/', main_site_only(staff.playground), name='playground'),
-    path('staff/dashboard/performance/', main_site_only(staff.performance_dashboard), name='performance_dashboard'),
-
+    
+    # Staff API
+    path('staff-api/posts/', main_site_only(staff_api.most_recent_posts), name='staff_api_posts'),
+    path('staff-api/unreviewed-blogs/', main_site_only(staff_api.unreviewed_blogs), name='staff_api_unreviewed_blogs'),
+    path('staff-api/blog/<slug:subdomain>/', main_site_only(staff_api.blog), name='staff_api_blog'),
+    path('staff-api/post/<int:pk>/', main_site_only(staff_api.post), name='staff_api_post'),
 
     # User dashboard
-    path('accounts/delete/', dashboard.delete_user, name='user_delete'),
-    path('signup/', signup_flow.signup, name="signup_flow"),
+    path('accounts/delete/', main_site_only(dashboard.delete_user), name='user_delete'),
+    path('signup/', main_site_only(signup_flow.signup), name="signup_flow"),
 
-    path('dashboard/', studio.list, name="account"),
-    path('dashboard/upgrade/', dashboard.upgrade, name='upgrade'),
-    path('dashboard/customise/', studio.dashboard_customisation, name="dashboard_customisation"),
+    path('dashboard/', main_site_only(studio.list), name="account"),
+    path('dashboard/upgrade/', main_site_only(dashboard.upgrade), name='upgrade'),
+    path('dashboard/customise/', main_site_only(studio.dashboard_customisation), name="dashboard_customisation"),
 
-    path('<id>/dashboard/', studio.studio, name="dashboard"),
-    path('<id>/delete/', dashboard.blog_delete, name="blog_delete"),
-    path('<id>/dashboard/nav/', dashboard.nav, name='nav'),
-    path('<id>/dashboard/styles/', dashboard.styles, name='styles'),
-    path('<id>/dashboard/settings/', dashboard.settings, name='settings'),
-    path('<id>/dashboard/custom-domain/', studio.custom_domain_edit, name='custom_domain_edit'),
-    path('<id>/dashboard/settings/advanced/', studio.advanced_settings, name='advanced_settings'),
-    path('<id>/dashboard/directives/', studio.directive_edit, name="directive_edit"),
-    path('<id>/dashboard/email-list/', emailer.email_list, name='email_list'),
+    path('<id>/dashboard/', main_site_only(studio.studio), name="dashboard"),
+    path('<id>/delete/', main_site_only(dashboard.blog_delete), name="blog_delete"),
+    path('<id>/dashboard/nav/', main_site_only(dashboard.nav), name='nav'),
+    path('<id>/dashboard/styles/', main_site_only(dashboard.styles), name='styles'),
+    path('<id>/dashboard/settings/', main_site_only(dashboard.settings), name='settings'),
+    path('<id>/dashboard/custom-domain/', main_site_only(studio.custom_domain_edit), name='custom_domain_edit'),
+    path('<id>/remove-domain/', main_site_only(studio.remove_domain), name='remove_domain'),
+    path('<id>/dashboard/settings/advanced/', main_site_only(studio.advanced_settings), name='advanced_settings'),
+    path('<id>/dashboard/directives/', main_site_only(studio.directive_edit), name="directive_edit"),
+    path('<id>/dashboard/email-list/', main_site_only(emailer.email_list), name='email_list'),
 
     # Media
-    path('<id>/dashboard/media/', media.media_center, name='media_center'),
-    path('<id>/dashboard/media/delete-selected/', media.delete_selected_media, name='delete_selected_media'),
-    path('<id>/dashboard/upload-image/', media.upload_image, name='upload_image'),
-    path('media/<str:img>/', media.image_proxy, name="image-proxy"),
+    path('<id>/dashboard/media/', main_site_only(media.media_center), name='media_center'),
+    path('<id>/dashboard/media/delete-selected/', main_site_only(media.delete_selected_media), name='delete_selected_media'),
+    path('<id>/dashboard/upload-image/', main_site_only(media.upload_image), name='upload_image'),
 
     # Analytics
-    path('<id>/dashboard/analytics/', analytics.analytics, name='analytics'),
-    path('<id>/dashboard/analytics-upgraded/', analytics.analytics_upgraded, name="analytics_upgraded"),
+    path('<id>/dashboard/analytics/', main_site_only(analytics.analytics), name='analytics'),
 
-    path('<id>/dashboard/opt-in-review/', dashboard.opt_in_review, name='opt_in_review'),
+    path('<id>/dashboard/opt-in-review/', main_site_only(dashboard.opt_in_review), name='opt_in_review'),
 
-    path('<id>/dashboard/posts/', dashboard.posts_edit, name='posts_edit'),
-    path('<id>/dashboard/pages/', dashboard.pages_edit, name='pages_edit'),
-    path('<id>/dashboard/posts/new/', studio.post, name="post_new"),
-    path('<id>/dashboard/posts/<uid>/', studio.post, name="post_edit"),
-    path('<id>/dashboard/posts/<uid>/delete/', dashboard.post_delete, name='post_delete'),
-    path('<id>/dashboard/preview/', studio.preview, name="post_preview"),
+    path('<id>/dashboard/posts/', main_site_only(dashboard.posts_edit), name='posts_edit'),
+    path('<id>/dashboard/pages/', main_site_only(dashboard.pages_edit), name='pages_edit'),
+    path('<id>/dashboard/posts/new/', main_site_only(studio.post), name="post_new"),
+    path('<id>/dashboard/posts/<uid>/', main_site_only(studio.post), name="post_edit"),
+    path('<id>/dashboard/posts/<uid>/delete/', main_site_only(dashboard.post_delete), name='post_delete'),
+    path('<id>/dashboard/preview/', main_site_only(studio.preview), name="post_preview"),
 
-    path('<id>/dashboard/post-template/', studio.post_template, name="post_template"),
+    path('<id>/dashboard/post-template/', main_site_only(studio.post_template), name="post_template"),
 
     # Webhook
-    path('lemon-webhook/', subscriptions.lemon_webhook, name='lemon_webhook'),
+    path('lemon-webhook/', main_site_only(subscriptions.lemon_webhook), name='lemon_webhook'),
 
     # Discover
     path('discover/', main_site_only(discover.discover), name='discover'),
     path('discover/feed/', main_site_only(discover.feed), name='discover_feed'),
     path('discover/search/', main_site_only(discover.search), name='search'),
+    path('discover/random-post/', main_site_only(discover.random_post), name='random_post'),
+    path('discover/random-blog/', main_site_only(discover.random_blog), name='random_blog'),
+
+    # Caddy validation
+    path('ping/', main_site_only(blog.ping), name='ping'),
 
     # Blog
-    path('ping/', blog.ping, name='ping'),
     
     # Icons
     path('favicon.ico', blog.favicon, name='favicon'),
@@ -103,6 +110,7 @@ urlpatterns = [
 
     path('sitemap.xml', blog.sitemap, name='sitemap'),
     path('robots.txt', blog.robots, name='robots'),
+    # TODO: Deprecate
     path('public-analytics/', blog.public_analytics, name="public_analytics"),
     path('upvote/', blog.upvote, name='upvote'),
     path('upvote-info/<uid>/', blog.get_upvote_info, name='get_upvote_info'),

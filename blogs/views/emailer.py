@@ -1,7 +1,6 @@
-from curses.ascii import HT
 import re
 
-import djqscsv
+from blogs.csv_utils import render_to_csv_response
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -26,14 +25,14 @@ def email_list(request, id):
 
     if request.GET.get("export-csv", ""):
         subscribers = subscribers.values('email_address', 'subscribed_date')
-        return djqscsv.render_to_csv_response(subscribers)
+        return render_to_csv_response(subscribers)
 
     if request.GET.get("export-txt", ""):
         subscribers = subscribers.values('email_address')
         file_data = ""
         for subscriber in subscribers:
             file_data += subscriber['email_address'] + "\n"
-        response = HttpResponse(file_data, content_type='application/text charset=utf-8')
+        response = HttpResponse(file_data, content_type='text/plain; charset=utf-8')
         response['Content-Disposition'] = 'attachment; filename="emails.txt"'
         return response
 
@@ -80,29 +79,29 @@ def subscribe(request):
 @csrf_exempt
 def email_subscribe(request):
     if is_dodgy(request):
-        return HttpResponse("Something went wrong. Try subscribing again. ʕノ•ᴥ•ʔノ ︵ ┻━┻")
-    
+        return HttpResponse("Something went wrong. Try subscribing again. ʕノ•ᴥ•ʔノ ︵ ┻━┻", content_type='text/plain')
+
     blog = resolve_address(request)
     if not blog:
         return not_found(request)
-    
+
     if request.method == "POST":
         email = request.POST.get("email")
         match = re.match(r'^[_a-z0-9-]+(\.[_a-z0-9-]+)*@[a-z0-9-]+(\.[a-z0-9-]+)*(\.[a-z]{2,4})$', email)
         if not match:
-            return HttpResponse("Bad email address.")
-        
+            return HttpResponse("Bad email address.", content_type='text/plain')
+
         recent_subscriptions = Subscriber.objects.filter(blog=blog, subscribed_date__gt=timezone.now()-timezone.timedelta(minutes=2)).count()
         if recent_subscriptions > 10:
-            return HttpResponse("Too many recent subscriptions timeout")
+            return HttpResponse("Too many recent subscriptions timeout", content_type='text/plain')
 
         subscriber, created = Subscriber.objects.get_or_create(blog=blog, email_address=email)
         if created:
-            return HttpResponse("You've been subscribed! ＼ʕ •ᴥ•ʔ／")
+            return HttpResponse("You've been subscribed! ＼ʕ •ᴥ•ʔ／", content_type='text/plain')
         else:
-            return HttpResponse("You're already subscribed.")
+            return HttpResponse("You're already subscribed.", content_type='text/plain')
 
-    return HttpResponse("Something went wrong.")
+    return HttpResponse("Something went wrong.", content_type='text/plain')
 
 
 def is_dodgy(request):

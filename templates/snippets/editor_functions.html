@@ -9,8 +9,57 @@
 	const $previewButton = document.getElementById('preview')
 	const $uploadButton = document.getElementById('upload-image')
 
+	// Draft recovery via localStorage
+	const draftKey = {% if post %}'bear_draft_{{ post.uid }}'{% else %}'bear_draft_' + window.location.pathname{% endif %};
+
+	const DRAFT_TTL = 1 * 60 * 1000; // 1 minute
+
+	const saveDraft = (body) => {
+		try { localStorage.setItem(draftKey, JSON.stringify({ body, savedAt: Date.now() })); } catch (e) {}
+	};
+
+	const rawDraft = localStorage.getItem(draftKey);
+	if (rawDraft !== null) {
+		let draft = null;
+		try { draft = JSON.parse(rawDraft); } catch (e) {}
+
+		if (!draft || Date.now() - draft.savedAt > DRAFT_TTL || draft.body === $textarea.value) {
+			// Invalid, expired, or already saved — discard silently
+			localStorage.removeItem(draftKey);
+		} else {
+			// Recent unsaved changes — show restore banner
+			const $banner = document.createElement('p');
+			$banner.style.cssText = 'color:lightsalmon;margin:0;padding:4px 0;font-size:small;';
+			$banner.innerHTML = 'Unsaved draft detected. <a href="#" id="restore-draft">Restore</a> or <a href="#" id="dismiss-draft">dismiss</a>.';
+			const $controls = $form.querySelector('.sticky-controls');
+			$controls.insertAdjacentElement('afterend', $banner);
+
+			document.getElementById('restore-draft').onclick = (e) => {
+				e.preventDefault();
+				$textarea.value = draft.body;
+				localStorage.removeItem(draftKey);
+				$banner.remove();
+			};
+			document.getElementById('dismiss-draft').onclick = (e) => {
+				e.preventDefault();
+				localStorage.removeItem(draftKey);
+				$banner.remove();
+			};
+		}
+	}
+
+	// Save body to localStorage on input (debounced 1s)
+	let draftTimer;
+	$textarea.addEventListener('input', () => {
+		clearTimeout(draftTimer);
+		draftTimer = setTimeout(() => saveDraft($textarea.value), 1000);
+	});
+
 	// Submitting form with header content
 	const addHeaderContentToFormAndSubmit = () => {
+		// Flush draft immediately before navigating away
+		clearTimeout(draftTimer);
+		saveDraft($textarea.value);
 		$hiddenHeaderContent.value = $headerContent.innerText;
 		$form.submit();
 	}
@@ -138,6 +187,14 @@
 		}
 	});
 
+	$textarea.addEventListener("paste", function(event) {
+		const files = event.clipboardData.files;
+		if (files.length > 0) {
+			event.preventDefault();
+			uploadNextFile(0, files);
+		}
+	});
+
 	function upload() {
 		const files = $fileInput.files;
 
@@ -177,9 +234,17 @@
 			if (this.status === 200) {
 				const response = JSON.parse(this.responseText);
 				const imageName = file.name.split('.')[0];
+				const fileExtension = file.name.split('.').pop().toLowerCase();
 
 				response.forEach(image => {
-					const toInsert = `![${imageName}](${image})\n`;
+					let toInsert;
+
+					if (fileExtension === 'mp4') {
+						toInsert = `<video controls style="max-width: 100%;">\n  <source src="${image}" type="video/mp4">\n</video>\n`;
+					} else {
+						toInsert = `![${imageName}](${image})\n`;
+					}
+
 					const currentText = $textarea.value;
 					const start = currentText.indexOf(placeholder);
 

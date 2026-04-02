@@ -1,10 +1,10 @@
 from django.utils import timezone
-from django.db import models
+from django.db import models, connection
+from django.contrib.postgres.search import SearchVectorField
 from django.contrib.auth.models import User
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 
-from allauth.account.models import EmailAddress
 
 from zoneinfo import ZoneInfo
 import os
@@ -23,7 +23,17 @@ class UserSettings(models.Model):
     upgraded_date = models.DateTimeField(blank=True, null=True, db_index=True)
     order_id = models.CharField(max_length=100, blank=True, null=True)
     order_email = models.CharField(max_length=100, blank=True, null=True)
+    PLAN_TYPE_CHOICES = [
+        ('monthly', 'monthly'),
+        ('yearly', 'yearly'),
+        ('lifetime', 'lifetime'),
+    ]
+    plan_type = models.CharField(max_length=20, choices=PLAN_TYPE_CHOICES, blank=True, null=True)
     upgraded_email_sent = models.BooleanField(default=False)
+    orphaned_domain_warning_email_sent = models.DateTimeField(blank=True, null=True)
+    upgrade_nudge_email_sent = models.DateTimeField(blank=True, null=True)
+    contribution_nudge_email_sent = models.DateTimeField(blank=True, null=True)
+    discovery_hide_list = models.JSONField(default=dict, blank=True)
 
     dashboard_styles = models.TextField(blank=True)
     dashboard_footer = models.TextField(blank=True)
@@ -68,9 +78,6 @@ class Blog(models.Model):
         verbose_name='')
     favicon = models.CharField(max_length=100, default="🐼", blank=True)
 
-    # TODO: Deprecate this
-    optimise_images = models.BooleanField(default=True)
-
     date_format = models.CharField(max_length=32, default="d M, Y", blank=True)
 
     analytics_active = models.BooleanField(default=True)
@@ -78,9 +85,6 @@ class Blog(models.Model):
     
     # TODO: Deprecate this
     public_analytics = models.BooleanField(default=False)
-
-    # Add blog to hits in legacy hits
-    analytics_update = models.BooleanField(default=False)
 
     post_template = models.TextField(blank=True)
     robots_txt = models.TextField(blank=True, default="User-agent: *\nAllow: /")
@@ -99,18 +103,10 @@ class Blog(models.Model):
     posts_in_last_12_hours = models.IntegerField(default=0, db_index=True)
 
     @property
-    def older_than_one_day(self):
-        return (timezone.now() - self.created_date).days > 1
-
-    @property
     def is_after_cutoff(self):
         cutoff_date = timezone.datetime(2025, 4, 20, tzinfo=ZoneInfo('UTC'))
         return self.created_date > cutoff_date
     
-    @property
-    def user_email_verified(self):
-        return EmailAddress.objects.filter(user=self.user, verified=True).exists()
-
     @property
     def contains_code(self):
         return "```" in self.content
@@ -182,7 +178,7 @@ class Blog(models.Model):
 
     def invalidate_cloudflare_cache(self):
         if os.getenv('ENVIRONMENT') == 'dev':
-            print("Invalidating cache for", self.subdomain)
+            # Don't invalidate on dev
             return
 
         cloudflare_api_key = os.getenv('CLOUDFLARE_API_KEY')
@@ -283,6 +279,7 @@ class Post(models.Model):
     shadow_votes = models.IntegerField(default=0, db_index=True)
     score = models.FloatField(default=0, db_index=True)
     hidden = models.BooleanField(default=False, db_index=True)
+    search_vector = SearchVectorField(null=True)
 
     @property
     def contains_code(self):
@@ -342,6 +339,14 @@ class Post(models.Model):
 
         # Save the post
         super(Post, self).save(*args, **kwargs)
+
+        # Update search vector via SQL to handle large content
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                UPDATE blogs_post
+                SET search_vector = to_tsvector('english', COALESCE(title, '') || ' ' || COALESCE(all_tags, '') || ' ' || LEFT(COALESCE(content, ''), 50000))
+                WHERE id = %s
+            """, [self.pk])
 
         # Save blog to trigger a few other things (unless skipped)
         if not skip_blog_save:
