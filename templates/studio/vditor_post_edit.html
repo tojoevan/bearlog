@@ -269,11 +269,13 @@ New post (Vditor) | Bear Blog
         input.click();
     });
     
+    {% if post and post.uid %}
     function deletePost() {
         if (confirm('Are you sure you want to delete this post?')) {
             window.location.href = '{% url 'post_delete' id=blog.subdomain uid=post.uid %}';
         }
     }
+    {% endif %}
 </script>
 
 {% include '../snippets/editor_functions.html' with blog=blog post=post%}
