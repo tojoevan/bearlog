@@ -32,6 +32,9 @@ LEMONSQUEEZY_SIGNATURE = os.getenv('LEMONSQUEEZY_SIGNATURE')
 
 DEBUG = (os.getenv('DEBUG') == 'True')
 
+# Debug Toolbar can be enabled separately even in production for debugging
+ENABLE_DEBUG_TOOLBAR = os.getenv('ENABLE_DEBUG_TOOLBAR', 'False') == 'True'
+
 if not DEBUG:
     # Logging settings
     def before_send(event, hint):
@@ -68,7 +71,7 @@ INTERNAL_IPS = [
 ]
 
 # Debug Toolbar configuration
-if DEBUG:
+if DEBUG and ENABLE_DEBUG_TOOLBAR:
     # Allow Debug Toolbar to show in production when DEBUG is True
     def show_toolbar(request):
         return True
@@ -96,8 +99,8 @@ INSTALLED_APPS = [
     'markdownx',
 ]
 
-# Only include debug_toolbar in DEBUG mode
-if DEBUG:
+# Only include debug_toolbar in DEBUG mode (or when ENABLE_DEBUG_TOOLBAR is explicitly set)
+if DEBUG and ENABLE_DEBUG_TOOLBAR:
     INSTALLED_APPS.append('debug_toolbar')
 
 AUTHENTICATION_BACKENDS = (
@@ -120,8 +123,8 @@ MIDDLEWARE = [
     'allauth.account.middleware.AccountMiddleware',
 ]
 
-# Only include debug_toolbar middleware in DEBUG mode
-if DEBUG:
+# Only include debug_toolbar middleware in DEBUG mode (or when ENABLE_DEBUG_TOOLBAR is explicitly set)
+if DEBUG and ENABLE_DEBUG_TOOLBAR:
     MIDDLEWARE.insert(6, 'debug_toolbar.middleware.DebugToolbarMiddleware')
 
 ROOT_URLCONF = 'conf.urls'
