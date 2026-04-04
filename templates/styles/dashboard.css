@@ -26,8 +26,8 @@
 }
 
 @keyframes blink {
-    0%, 96% { content: "ᕦʕ •ᴥ•ʔᕤ"; }
-    97%, 100% { content: "ᕦʕ -ᴥ-ʔᕤ"; }
+    0%, 96% { content: "[-ᴥ-]"; }
+    97%, 100% { content: "[·ᴥ·]"; }
 }
 
 a.account:hover {
@@ -35,11 +35,11 @@ a.account:hover {
 }
 
 a.account::before {
-    content: "ʕ-ᴥ-ʔ";
+    content: "[·ᴥ·]";
 }
 
 .account:hover::before {
-    content: "ʕ•ᴥ•ʔ";
+    content: "[-ᴥ-]";
 }
 
 header nav {
