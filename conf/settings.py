@@ -93,9 +93,12 @@ INSTALLED_APPS = [
     'blogs.apps.BlogsConfig',
     'allauth.account',
     'allauth.socialaccount',
-    'debug_toolbar',
     'markdownx',
 ]
+
+# Only include debug_toolbar in DEBUG mode
+if DEBUG:
+    INSTALLED_APPS.append('debug_toolbar')
 
 AUTHENTICATION_BACKENDS = (
     'django.contrib.auth.backends.ModelBackend',
@@ -109,7 +112,6 @@ MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
-    'debug_toolbar.middleware.DebugToolbarMiddleware',
     'django.middleware.common.CommonMiddleware',
     'blogs.middleware.AllowAnyDomainCsrfMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -117,6 +119,10 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'allauth.account.middleware.AccountMiddleware',
 ]
+
+# Only include debug_toolbar middleware in DEBUG mode
+if DEBUG:
+    MIDDLEWARE.insert(6, 'debug_toolbar.middleware.DebugToolbarMiddleware')
 
 ROOT_URLCONF = 'conf.urls'
 TEMPLATES = [
