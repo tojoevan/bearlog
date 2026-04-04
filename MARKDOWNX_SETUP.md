@@ -60,15 +60,47 @@ pip install -r requirements.txt
 python manage.py migrate
 ```
 
-### 收集静态文件
+### 收集静态文件（开发环境）
 ```bash
-python manage.py collectstatic
+python manage.py collectstatic --noinput
+```
+
+### 复制静态文件到 static 目录（生产部署必需）
+```bash
+# 将 MarkdownX 静态文件复制到 static 目录
+cp -R $(python -c "import markdownx; import os; print(os.path.dirname(markdownx.__file__))")/static/markdownx static/
 ```
 
 ### 运行服务器
 ```bash
 python manage.py runserver
 ```
+
+### 部署注意事项
+
+**重要：** 在生产环境部署时，需要确保 MarkdownX 的静态文件存在于 `static/markdownx/` 目录：
+
+1. **自动复制**（推荐）- 在部署脚本中添加：
+   ```bash
+   cp -R $(python -c "import markdownx; import os; print(os.path.dirname(markdownx.__file__))")/static/markdownx static/
+   ```
+
+2. **或者手动复制**：
+   ```bash
+   cp -R /path/to/site-packages/markdownx/static/markdownx static/
+   ```
+
+3. **验证文件存在**：
+   ```
+   static/markdownx/
+   ├── admin/
+   │   └── css/
+   │       ├── markdownx.css
+   │       └── markdownx.min.css
+   └── js/
+       ├── markdownx.js
+       └── markdownx.min.js
+   ```
 
 ## 功能特性
 
