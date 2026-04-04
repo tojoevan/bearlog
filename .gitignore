@@ -117,3 +117,7 @@ sync_data.sh
 CLAUDE.md
 .claude*
 Caddyfile.dev
+
+.DS_Store
+**/.DS_Store
+.DS_Store?
