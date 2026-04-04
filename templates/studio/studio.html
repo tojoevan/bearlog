@@ -80,6 +80,30 @@
 
     <!-- MarkdownX Editor -->
     <div class="markdownx" style="margin-top: 10px;">
+        <!-- Markdown Toolbar -->
+        <div class="md-toolbar" style="margin-bottom: 5px; padding: 5px; background: #f5f5f5; border-radius: 4px 4px 0 0; border: 1px solid #ddd; display: flex; flex-wrap: wrap; gap: 4px; align-items: center;">
+            <button type="button" class="md-btn" onclick="mdInsert('**', '**')" title="Bold (Ctrl+B)"><b>B</b></button>
+            <button type="button" class="md-btn" onclick="mdInsert('*', '*')" title="Italic (Ctrl+I)"><i>I</i></button>
+            <button type="button" class="md-btn" onclick="mdInsert('~~', '~~')" title="Strikethrough"><s>S</s></button>
+            <span style="border-left: 1px solid #ccc; height: 20px; margin: 0 4px;"></span>
+            <button type="button" class="md-btn" onclick="mdInsert('# ', '')" title="Heading 1">H1</button>
+            <button type="button" class="md-btn" onclick="mdInsert('## ', '')" title="Heading 2">H2</button>
+            <button type="button" class="md-btn" onclick="mdInsert('### ', '')" title="Heading 3">H3</button>
+            <span style="border-left: 1px solid #ccc; height: 20px; margin: 0 4px;"></span>
+            <button type="button" class="md-btn" onclick="mdInsert('[', '](url)')" title="Link">🔗</button>
+            <button type="button" class="md-btn" onclick="mdInsert('![alt](', ')')" title="Image">🖼️</button>
+            <span style="border-left: 1px solid #ccc; height: 20px; margin: 0 4px;"></span>
+            <button type="button" class="md-btn" onclick="mdInsert('> ', '')" title="Quote">❝</button>
+            <button type="button" class="md-btn" onclick="mdInsert('`', '`')" title="Inline Code">`</button>
+            <button type="button" class="md-btn" onclick="mdInsert('\n```\n', '\n```\n')" title="Code Block">{ }</button>
+            <span style="border-left: 1px solid #ccc; height: 20px; margin: 0 4px;"></span>
+            <button type="button" class="md-btn" onclick="mdInsert('- ', '')" title="Unordered List">•</button>
+            <button type="button" class="md-btn" onclick="mdInsert('1. ', '')" title="Ordered List">1.</button>
+            <button type="button" class="md-btn" onclick="mdInsert('- [ ] ', '')" title="Task">☐</button>
+            <span style="border-left: 1px solid #ccc; height: 20px; margin: 0 4px;"></span>
+            <button type="button" class="md-btn" onclick="mdInsert('\n---\n', '')" title="Horizontal Rule">—</button>
+            <button type="button" class="md-btn" onclick="mdInsert('\n', '')" title="Line Break">↵</button>
+        </div>
         <textarea
             id="id_body_content"
             name="body_content"
@@ -88,7 +112,7 @@
             data-markdownx-upload-urls-path="/markdownx/upload/"
             data-markdownx-urls-path="/markdownx/markdownify/"
             data-markdownx-latency="500"
-            style="min-height: 500px; width: 100%; border: 1px solid lightgrey; padding: 10px;"
+            style="min-height: 500px; width: 100%; border: 1px solid lightgrey; padding: 10px; border-top: none; border-radius: 0 0 4px 4px;"
             placeholder="Write your homepage content with Markdown..."
         >{{ blog.content }}</textarea>
         
@@ -111,7 +135,55 @@
 
 <!-- MarkdownX Initialization -->
 <script src="{% static 'markdownx/js/markdownx.js' %}"></script>
+<style>
+.md-btn {
+    background: white;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+    padding: 4px 8px;
+    cursor: pointer;
+    font-size: 14px;
+    min-width: 28px;
+}
+.md-btn:hover {
+    background: #e0e0e0;
+}
+</style>
 <script>
+// Markdown toolbar insert function
+function mdInsert(before, after) {
+    const editor = document.querySelector('.markdownx-editor');
+    if (!editor) return;
+    
+    const start = editor.selectionStart;
+    const end = editor.selectionEnd;
+    const text = editor.value;
+    const selected = text.substring(start, end);
+    
+    editor.value = text.substring(0, start) + before + selected + after + text.substring(end);
+    editor.focus();
+    
+    // Set cursor position
+    if (selected) {
+        editor.setSelectionRange(start + before.length, start + before.length + selected.length);
+    } else {
+        const newPos = start + before.length;
+        editor.setSelectionRange(newPos, newPos);
+    }
+}
+
+// Keyboard shortcuts
+document.addEventListener('keydown', function(e) {
+    if (e.ctrlKey || e.metaKey) {
+        const editor = document.querySelector('.markdownx-editor');
+        if (e.target === editor) {
+            if (e.key === 'b') { e.preventDefault(); mdInsert('**', '**'); }
+            if (e.key === 'i') { e.preventDefault(); mdInsert('*', '*'); }
+            if (e.key === 'k') { e.preventDefault(); mdInsert('[', '](url)'); }
+        }
+    }
+});
+
 console.log('=== MarkdownX Debug Info ===');
 console.log('Script loaded, checking initialization...');
 
