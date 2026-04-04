@@ -813,6 +813,11 @@ def todo_list(request, id):
     # 基础查询集
     todos = Todo.objects.filter(blog=blog)
     
+    # 检查并重置周期性任务的状态
+    for todo in todos:
+        if todo.is_recurring:
+            todo.check_and_reset_cycle()
+    
     # 如果是回收站视图，只显示已取消的任务
     if view_mode == 'trash':
         todos = todos.filter(status='cancelled')
@@ -825,8 +830,8 @@ def todo_list(request, id):
             # 如果明确选择查看已完成，显示所有已完成的任务
             todos = todos.filter(status='completed')
         else:
-            # 默认视图：显示待处理和进行中的任务
-            # 但对于周期性任务，也显示最近完成的任务（24小时内）
+            # 默认视图：显示待处理、进行中的任务
+            # 以及最近完成的周期性任务（等待新周期）
             from django.utils import timezone as tz
             recent_completed_cutoff = tz.now() - tz.timedelta(hours=24)
             

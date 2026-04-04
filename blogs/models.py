@@ -547,105 +547,104 @@ class Todo(models.Model):
     
     def complete(self):
         """
-        完成任务，如果是周期性任务则创建下一个实例
+        完成任务
         
         行为说明：
-        - 非周期性任务：标记为 completed
+        - 非周期性任务：标记为 completed（永久）
         - 周期性任务：
           1. 当前实例标记为 completed
-          2. 自动创建下一个周期的新实例（状态为 pending）
-          3. 新实例的 due_date 根据周期类型自动计算
+          2. 记录完成时间
+          3. 计算下一个周期的截止日期
+          4. **不创建新实例**，等待下次查询时自动重置状态
         """
         from django.utils import timezone
         
         # 标记当前任务为已完成
         self.status = 'completed'
         self.completed_date = timezone.now()
-        self.save()
         
-        # 如果是周期性任务，创建下一个实例
+        # 如果是周期性任务，计算下一个周期的截止日期
         if self.is_recurring and self.recurring_type:
-            next_todo = self.create_next_occurrence()
-            if next_todo:
-                print(f"✅ Recurring task '{self.title}' completed. Next occurrence created for {next_todo.due_date}")
-            else:
-                print(f"⚠️ Failed to create next occurrence for recurring task '{self.title}'")
+            self.calculate_next_due_date()
+        
+        self.save()
+        print(f"✅ Task '{self.title}' completed (Recurring: {self.is_recurring})")
     
-    def create_next_occurrence(self):
+    def calculate_next_due_date(self):
         """
-        为周期性任务创建下一个实例
+        计算下一个周期的截止日期
         
-        新实例特性：
-        - status: 'pending' (待处理状态)
-        - due_date: 根据周期类型自动计算
-        - 继承原任务的所有属性（标题、描述、优先级、标签等）
-        
-        Returns:
-            Todo: 新创建的待办事项实例，如果失败则返回 None
+        根据当前完成时间和周期类型，计算下一个周期的截止日期
+        不创建新实例，只更新当前任务的 due_date
         """
         from django.utils import timezone
         from datetime import timedelta
         
-        try:
-            if not self.next_occurrence:
-                # 计算下次出现时间
-                now = timezone.now()
-                if self.recurring_type == 'daily':
-                    delta = timedelta(days=self.recurring_interval)
-                elif self.recurring_type == 'weekly':
-                    delta = timedelta(weeks=self.recurring_interval)
-                elif self.recurring_type == 'monthly':
-                    # 简单处理：按月增加
-                    month = now.month + self.recurring_interval
-                    year = now.year + (month - 1) // 12
-                    month = ((month - 1) % 12) + 1
-                    try:
-                        next_date = now.replace(year=year, month=month)
-                    except ValueError:
-                        # 处理月末日期问题
-                        import calendar
-                        last_day = calendar.monthrange(year, month)[1]
-                        next_date = now.replace(year=year, month=month, day=last_day)
-                    delta = next_date - now
-                elif self.recurring_type == 'yearly':
-                    try:
-                        next_date = now.replace(year=now.year + self.recurring_interval)
-                    except ValueError:
-                        import calendar
-                        last_day = calendar.monthrange(now.year + self.recurring_interval, now.month)[1]
-                        next_date = now.replace(year=now.year + self.recurring_interval, day=last_day)
-                    delta = next_date - now
-                else:
-                    delta = timedelta(days=self.recurring_interval)
-                
-                self.next_occurrence = now + delta
-            
-            # 创建新的待办事项（状态为 pending）
-            new_todo = Todo.objects.create(
-                blog=self.blog,
-                title=self.title,
-                description=self.description,
-                status='pending',  # 新实例默认为待处理状态
-                priority=self.priority,
-                is_recurring=self.is_recurring,
-                recurring_type=self.recurring_type,
-                recurring_interval=self.recurring_interval,
-                due_date=self.next_occurrence,
-                next_occurrence=None,  # 将在下次完成时计算
-                tags=self.tags,
-            )
-            
-            # 更新当前任务的下次出现时间
+        if not self.completed_date:
+            return
+        
+        # 基于完成时间计算下一个周期
+        completed = self.completed_date
+        
+        if self.recurring_type == 'daily':
+            delta = timedelta(days=self.recurring_interval)
+            self.due_date = completed + delta
+        elif self.recurring_type == 'weekly':
+            delta = timedelta(weeks=self.recurring_interval)
+            self.due_date = completed + delta
+        elif self.recurring_type == 'monthly':
+            # 按月增加
+            month = completed.month + self.recurring_interval
+            year = completed.year + (month - 1) // 12
+            month = ((month - 1) % 12) + 1
+            try:
+                self.due_date = completed.replace(year=year, month=month)
+            except ValueError:
+                # 处理月末日期问题
+                import calendar
+                last_day = calendar.monthrange(year, month)[1]
+                self.due_date = completed.replace(year=year, month=month, day=last_day)
+        elif self.recurring_type == 'yearly':
+            try:
+                self.due_date = completed.replace(year=completed.year + self.recurring_interval)
+            except ValueError:
+                import calendar
+                last_day = calendar.monthrange(completed.year + self.recurring_interval, completed.month)[1]
+                self.due_date = completed.replace(year=completed.year + self.recurring_interval, day=last_day)
+        else:
+            # 默认按天计算
+            delta = timedelta(days=self.recurring_interval)
+            self.due_date = completed + delta
+        
+        print(f"🔁 Next cycle due date: {self.due_date}")
+    
+    def check_and_reset_cycle(self):
+        """
+        检查是否进入新周期，如果是则重置状态为 pending
+        
+        应该在查询任务时调用此方法
+        Returns:
+            bool: 是否重置了状态
+        """
+        from django.utils import timezone
+        
+        if not self.is_recurring or self.status != 'completed':
+            return False
+        
+        if not self.due_date:
+            return False
+        
+        # 如果当前时间已超过下一个周期的截止日期，说明进入新周期
+        now = timezone.now()
+        if now >= self.due_date:
+            # 重置为待处理状态
+            self.status = 'pending'
+            self.completed_date = None
             self.save()
-            
-            print(f"🔁 Created next occurrence: '{new_todo.title}' due on {new_todo.due_date}")
-            return new_todo
-            
-        except Exception as e:
-            print(f"❌ Error creating next occurrence: {e}")
-            import traceback
-            traceback.print_exc()
-            return None
+            print(f"🔄 Task '{self.title}' reset to pending for new cycle")
+            return True
+        
+        return False
     
     def __str__(self):
         status_icon = {'pending': '⏳', 'in_progress': '🔄', 'completed': '✅', 'cancelled': '❌'}.get(self.status, '')
