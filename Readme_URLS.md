@@ -177,3 +177,4 @@ main_site_hosts = os.getenv('MAIN_SITE_HOSTS', '').split(',')
 | `media` | `blogs/views/media.py` | 媒体中心 |
 | `subscriptions` | `blogs/subscriptions.py` | 支付订阅 |
 | `signup_flow` | `blogs/views/signup_flow.py` | 注册流程 |
+
