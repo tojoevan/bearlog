@@ -208,6 +208,13 @@ STATIC_URL = "static/"
 STATICFILES_DIRS = [
     BASE_DIR / "static",
 ]
+
+# Static file finders - ensures Django can find static files in both development and production
+STATICFILES_FINDERS = [
+    'django.contrib.staticfiles.finders.FileSystemFinder',  # Finds files in STATICFILES_DIRS
+    'django.contrib.staticfiles.finders.AppDirectoriesFinder',  # Finds files in installed apps (e.g., markdownx)
+]
+
 GEOIP_PATH = "geoip/"
 
 # Enable WhiteNoise's GZip compression of static assets.

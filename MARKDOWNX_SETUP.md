@@ -18,6 +18,13 @@ django-markdownx==4.0.9
   - `MARKDOWNX_UPLOAD_MAX_SIZE`: 最大上传大小 (50MB)
   - `MARKDOWNX_IMAGE_MAX_SIZE`: 图片最大尺寸
   - `MARKDOWNX_DEFAULT_ATTRIBUTES`: 默认编辑器属性
+- **重要**: 添加 `STATICFILES_FINDERS` 配置，确保开发环境下能正确查找静态文件：
+  ```python
+  STATICFILES_FINDERS = [
+      'django.contrib.staticfiles.finders.FileSystemFinder',  # 查找 STATICFILES_DIRS 中的文件
+      'django.contrib.staticfiles.finders.AppDirectoriesFinder',  # 查找已安装应用中的文件（如 markdownx）
+  ]
+  ```
 
 ### 3. URL 配置
 在 `conf/urls.py` 中添加:
@@ -78,7 +85,15 @@ python manage.py runserver
 
 ### 部署注意事项
 
-**重要：** 在生产环境部署时，需要确保 MarkdownX 的静态文件存在于 `static/markdownx/` 目录：
+**重要**: 开发和生产环境处理静态文件的方式不同：
+
+#### 开发环境 (DEBUG=True)
+- ✅ Django 会自动通过 `AppDirectoriesFinder` 从已安装应用中查找静态文件
+- ✅ **不需要**手动复制静态文件到 `static/` 目录
+- ✅ 只需确保 `STATICFILES_FINDERS` 配置正确
+
+#### 生产环境 (DEBUG=False)
+在生产环境部署时，需要确保 MarkdownX 的静态文件存在于 `static/markdownx/` 目录：
 
 1. **自动复制**（推荐）- 在部署脚本中添加：
    ```bash
@@ -100,6 +115,11 @@ python manage.py runserver
    └── js/
        ├── markdownx.js
        └── markdownx.min.js
+   ```
+
+4. **运行 collectstatic**：
+   ```bash
+   python manage.py collectstatic --noinput
    ```
 
 ## 功能特性
@@ -131,6 +151,28 @@ python manage.py runserver
 3. 使用 `data-markdownx-*` 属性配置编辑器行为
 
 ## 故障排除
+
+### 开发环境 (DEBUG=True) 静态文件 404 错误
+
+**问题**: 在开发环境下，访问 `/static/markdownx/...` 时出现 404 错误。
+
+**原因**: Django 需要正确配置 `STATICFILES_FINDERS` 才能从已安装的应用中查找静态文件。
+
+**解决方案**:
+1. 确保 `conf/settings.py` 中包含以下配置：
+   ```python
+   STATICFILES_FINDERS = [
+       'django.contrib.staticfiles.finders.FileSystemFinder',
+       'django.contrib.staticfiles.finders.AppDirectoriesFinder',
+   ]
+   ```
+2. 重启开发服务器：
+   ```bash
+   python manage.py runserver
+   ```
+3. Django 会自动从 django-markdownx 包的 static 目录提供文件服务。
+
+**注意**: 在开发环境下，不需要手动复制静态文件到 `static/` 目录，Django 会通过 `AppDirectoriesFinder` 自动找到它们。
 
 ### 图片上传失败
 - 检查 `MEDIA_ROOT` 目录权限
