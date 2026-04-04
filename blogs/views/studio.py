@@ -808,16 +808,22 @@ def todo_list(request, id):
     # 获取过滤参数
     status_filter = request.GET.get('status', 'all')
     priority_filter = request.GET.get('priority', 'all')
+    view_mode = request.GET.get('view', 'active')  # 'active' or 'trash'
     
     # 基础查询集
     todos = Todo.objects.filter(blog=blog)
     
-    # 应用过滤器
-    if status_filter != 'all':
-        todos = todos.filter(status=status_filter)
+    # 如果是回收站视图，只显示已取消的任务
+    if view_mode == 'trash':
+        todos = todos.filter(status='cancelled')
+        status_filter = 'cancelled'
     else:
-        # 默认不显示已完成和已取消的任务
-        todos = todos.exclude(status__in=['completed', 'cancelled'])
+        # 应用过滤器
+        if status_filter != 'all':
+            todos = todos.filter(status=status_filter)
+        else:
+            # 默认不显示已完成和已取消的任务
+            todos = todos.exclude(status__in=['completed', 'cancelled'])
     
     if priority_filter != 'all':
         todos = todos.filter(priority=priority_filter)
@@ -832,6 +838,7 @@ def todo_list(request, id):
         'pending': Todo.objects.filter(blog=blog, status='pending').count(),
         'in_progress': Todo.objects.filter(blog=blog, status='in_progress').count(),
         'completed': Todo.objects.filter(blog=blog, status='completed').count(),
+        'cancelled': Todo.objects.filter(blog=blog, status='cancelled').count(),
         'overdue': Todo.objects.filter(
             blog=blog,
             status__in=['pending', 'in_progress'],
@@ -845,6 +852,7 @@ def todo_list(request, id):
         'stats': stats,
         'status_filter': status_filter,
         'priority_filter': priority_filter,
+        'view_mode': view_mode,
     })
 
 
@@ -929,6 +937,11 @@ def todo_update(request, id, pk):
         elif action == 'cancel':
             todo.status = 'cancelled'
             todo.save()
+        elif action == 'restore':
+            # 从回收站恢复
+            todo.status = 'pending'
+            todo.completed_date = None
+            todo.save()
         elif action == 'reopen':
             todo.status = 'pending'
             todo.completed_date = None
@@ -936,6 +949,10 @@ def todo_update(request, id, pk):
         elif action == 'delete':
             todo.delete()
             return redirect('todo_list', id=blog.subdomain)
+        elif action == 'empty_trash':
+            # 清空回收站（删除所有已取消的任务）
+            Todo.objects.filter(blog=blog, status='cancelled').delete()
+            return redirect('todo_list', id=blog.subdomain + '?view=trash')
         elif action == 'update':
             # 更新详细信息
             todo.title = request.POST.get('title', todo.title)
@@ -959,6 +976,12 @@ def todo_update(request, id, pk):
                     pass
             else:
                 todo.due_date = None
+            
+            # 更新标签
+            tags_str = request.POST.get('tags', '')
+            import json
+            tag_list = [tag.strip() for tag in tags_str.split(',') if tag.strip()] if tags_str else []
+            todo.tags = json.dumps(tag_list)
             
             todo.save()
         

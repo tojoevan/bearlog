@@ -334,27 +334,41 @@
     
     <!-- Statistics -->
     <div class="todo-stats">
-        <div class="stat-card">
-            <div class="number">{{ stats.total }}</div>
-            <div class="label">Total Active</div>
-        </div>
-        <div class="stat-card">
-            <div class="number">{{ stats.pending }}</div>
-            <div class="label">Pending</div>
-        </div>
-        <div class="stat-card">
-            <div class="number">{{ stats.in_progress }}</div>
-            <div class="label">In Progress</div>
-        </div>
-        <div class="stat-card">
-            <div class="number">{{ stats.completed }}</div>
-            <div class="label">Completed</div>
-        </div>
-        {% if stats.overdue > 0 %}
-        <div class="stat-card" style="background: #ffebee;">
-            <div class="number" style="color: #c62828;">{{ stats.overdue }}</div>
-            <div class="label">Overdue</div>
-        </div>
+        {% if view_mode == 'trash' %}
+            <div class="stat-card" style="background: #ffebee;">
+                <div class="number" style="color: #c62828;">{{ stats.cancelled }}</div>
+                <div class="label">🗑️ In Trash</div>
+            </div>
+            <a href="?view=active" style="align-self: center; padding: 10px 20px; background: #2196f3; color: white; border-radius: 4px; text-decoration: none;">← Back to Active Todos</a>
+        {% else %}
+            <div class="stat-card">
+                <div class="number">{{ stats.total }}</div>
+                <div class="label">Total Active</div>
+            </div>
+            <div class="stat-card">
+                <div class="number">{{ stats.pending }}</div>
+                <div class="label">Pending</div>
+            </div>
+            <div class="stat-card">
+                <div class="number">{{ stats.in_progress }}</div>
+                <div class="label">In Progress</div>
+            </div>
+            <div class="stat-card">
+                <div class="number">{{ stats.completed }}</div>
+                <div class="label">Completed</div>
+            </div>
+            {% if stats.overdue > 0 %}
+            <div class="stat-card" style="background: #ffebee;">
+                <div class="number" style="color: #c62828;">{{ stats.overdue }}</div>
+                <div class="label">Overdue</div>
+            </div>
+            {% endif %}
+            {% if stats.cancelled > 0 %}
+            <a href="?view=trash" class="stat-card" style="text-decoration: none; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='#f5f5f5'" onmouseout="this.style.background='#fafafa'">
+                <div class="number" style="color: #666;">{{ stats.cancelled }}</div>
+                <div class="label">🗑️ Trash</div>
+            </a>
+            {% endif %}
         {% endif %}
     </div>
     
@@ -423,25 +437,29 @@
     
     <!-- Filters -->
     <div class="todo-filters">
-        <label>Filter by Status:</label>
-        <select onchange="window.location.href='?status=' + this.value + '&priority={{ priority_filter }}'">
-            <option value="all" {% if status_filter == 'all' %}selected{% endif %}>All Active</option>
-            <option value="pending" {% if status_filter == 'pending' %}selected{% endif %}>Pending</option>
-            <option value="in_progress" {% if status_filter == 'in_progress' %}selected{% endif %}>In Progress</option>
-            <option value="completed" {% if status_filter == 'completed' %}selected{% endif %}>Completed</option>
-            <option value="cancelled" {% if status_filter == 'cancelled' %}selected{% endif %}>Cancelled</option>
-        </select>
-        
-        <label>Filter by Priority:</label>
-        <select onchange="window.location.href='?status={{ status_filter }}&priority=' + this.value">
-            <option value="all" {% if priority_filter == 'all' %}selected{% endif %}>All Priorities</option>
-            <option value="urgent" {% if priority_filter == 'urgent' %}selected{% endif %}>Urgent</option>
-            <option value="high" {% if priority_filter == 'high' %}selected{% endif %}>High</option>
-            <option value="medium" {% if priority_filter == 'medium' %}selected{% endif %}>Medium</option>
-            <option value="low" {% if priority_filter == 'low' %}selected{% endif %}>Low</option>
-        </select>
-        
-        <a href="?status=all&priority=all" style="margin-left: auto; font-size: 14px;">Clear Filters</a>
+        {% if view_mode == 'trash' %}
+            <a href="?view=active" style="font-weight: 600;">← Back to Active Todos</a>
+            <span style="margin-left: auto; color: #666;">🗑️ Trash View - Showing Cancelled Items</span>
+        {% else %}
+            <label>Filter by Status:</label>
+            <select onchange="window.location.href='?status=' + this.value + '&priority={{ priority_filter }}&view=active'">
+                <option value="all" {% if status_filter == 'all' %}selected{% endif %}>All Active</option>
+                <option value="pending" {% if status_filter == 'pending' %}selected{% endif %}>Pending</option>
+                <option value="in_progress" {% if status_filter == 'in_progress' %}selected{% endif %}>In Progress</option>
+                <option value="completed" {% if status_filter == 'completed' %}selected{% endif %}>Completed</option>
+            </select>
+            
+            <label>Filter by Priority:</label>
+            <select onchange="window.location.href='?status={{ status_filter }}&priority=' + this.value + '&view=active'">
+                <option value="all" {% if priority_filter == 'all' %}selected{% endif %}>All Priorities</option>
+                <option value="urgent" {% if priority_filter == 'urgent' %}selected{% endif %}>Urgent</option>
+                <option value="high" {% if priority_filter == 'high' %}selected{% endif %}>High</option>
+                <option value="medium" {% if priority_filter == 'medium' %}selected{% endif %}>Medium</option>
+                <option value="low" {% if priority_filter == 'low' %}selected{% endif %}>Low</option>
+            </select>
+            
+            <a href="?view=trash" style="margin-left: auto; font-size: 14px; color: #666;">🗑️ Trash ({{ stats.cancelled }})</a>
+        {% endif %}
     </div>
     
     <!-- Todo List -->
@@ -485,44 +503,100 @@
                     </div>
                     
                     <div class="todo-actions">
-                        {% if todo.status == 'pending' %}
+                        {% if view_mode == 'trash' %}
+                            <!-- Trash View Actions -->
                             <form method="POST" action="{% url 'todo_update' id=blog.subdomain pk=todo.pk %}" style="display: inline;">
                                 {% csrf_token %}
-                                <input type="hidden" name="action" value="start">
-                                <button type="submit">Start</button>
+                                <input type="hidden" name="action" value="restore">
+                                <button type="submit" title="Restore from trash">♻️ Restore</button>
                             </form>
-                        {% endif %}
-                        
-                        {% if todo.status != 'completed' %}
-                            <form method="POST" action="{% url 'todo_update' id=blog.subdomain pk=todo.pk %}" style="display: inline;">
+                            <form method="POST" action="{% url 'todo_update' id=blog.subdomain pk=todo.pk %}" style="display: inline;" onsubmit="return confirm('Permanently delete this todo? This cannot be undone.');">
                                 {% csrf_token %}
-                                <input type="hidden" name="action" value="complete">
-                                <button type="submit" class="btn-complete">Complete</button>
+                                <input type="hidden" name="action" value="delete">
+                                <button type="submit" class="btn-delete">🗑️ Delete</button>
                             </form>
+                        {% else %}
+                            <!-- Active View Actions -->
+                            <button type="button" onclick="toggleEditForm({{ todo.pk }})" title="Edit todo">✏️ Edit</button>
+                            
+                            {% if todo.status == 'pending' %}
+                                <form method="POST" action="{% url 'todo_update' id=blog.subdomain pk=todo.pk %}" style="display: inline;">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="start">
+                                    <button type="submit">▶️ Start</button>
+                                </form>
+                            {% endif %}
+                            
+                            {% if todo.status != 'completed' %}
+                                <form method="POST" action="{% url 'todo_update' id=blog.subdomain pk=todo.pk %}" style="display: inline;">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="complete">
+                                    <button type="submit" class="btn-complete">✅ Complete</button>
+                                </form>
+                            {% endif %}
+                            
+                            {% if todo.status == 'completed' %}
+                                <form method="POST" action="{% url 'todo_update' id=blog.subdomain pk=todo.pk %}" style="display: inline;">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="reopen">
+                                    <button type="submit">🔄 Reopen</button>
+                                </form>
+                            {% endif %}
+                            
+                            {% if todo.status != 'completed' and todo.status != 'cancelled' %}
+                                <form method="POST" action="{% url 'todo_update' id=blog.subdomain pk=todo.pk %}" style="display: inline;">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="cancel">
+                                    <button type="submit">❌ Cancel</button>
+                                </form>
+                            {% endif %}
                         {% endif %}
-                        
-                        {% if todo.status == 'completed' or todo.status == 'cancelled' %}
-                            <form method="POST" action="{% url 'todo_update' id=blog.subdomain pk=todo.pk %}" style="display: inline;">
-                                {% csrf_token %}
-                                <input type="hidden" name="action" value="reopen">
-                                <button type="submit">Reopen</button>
-                            </form>
-                        {% endif %}
-                        
-                        {% if todo.status != 'completed' %}
-                            <form method="POST" action="{% url 'todo_update' id=blog.subdomain pk=todo.pk %}" style="display: inline;">
-                                {% csrf_token %}
-                                <input type="hidden" name="action" value="cancel">
-                                <button type="submit">Cancel</button>
-                            </form>
-                        {% endif %}
-                        
-                        <form method="POST" action="{% url 'todo_update' id=blog.subdomain pk=todo.pk %}" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete this todo?');">
-                            {% csrf_token %}
-                            <input type="hidden" name="action" value="delete">
-                            <button type="submit" class="btn-delete">Delete</button>
-                        </form>
                     </div>
+                </div>
+                
+                <!-- Edit Form (Hidden by default) -->
+                <div id="edit-form-{{ todo.pk }}" class="todo-edit-form" style="display: none; margin-top: 15px; padding: 15px; background: #f9f9f9; border-radius: 4px; border: 1px solid #ddd;">
+                    <form method="POST" action="{% url 'todo_update' id=blog.subdomain pk=todo.pk %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="update">
+                        
+                        <div class="form-row">
+                            <label for="title-{{ todo.pk }}">Title</label>
+                            <input type="text" id="title-{{ todo.pk }}" name="title" value="{{ todo.title }}" required>
+                        </div>
+                        
+                        <div class="form-row">
+                            <label for="description-{{ todo.pk }}">Description</label>
+                            <textarea id="description-{{ todo.pk }}" name="description">{{ todo.description }}</textarea>
+                        </div>
+                        
+                        <div class="form-row">
+                            <label for="priority-{{ todo.pk }}">Priority</label>
+                            <select id="priority-{{ todo.pk }}" name="priority">
+                                <option value="low" {% if todo.priority == 'low' %}selected{% endif %}>Low</option>
+                                <option value="medium" {% if todo.priority == 'medium' %}selected{% endif %}>Medium</option>
+                                <option value="high" {% if todo.priority == 'high' %}selected{% endif %}>High</option>
+                                <option value="urgent" {% if todo.priority == 'urgent' %}selected{% endif %}>Urgent</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-row">
+                            <label for="due_date-{{ todo.pk }}">Due Date</label>
+                            <input type="datetime-local" id="due_date-{{ todo.pk }}" name="due_date" 
+                                   value="{% if todo.due_date %}{{ todo.due_date|date:'Y-m-d\TH:i' }}{% endif %}">
+                        </div>
+                        
+                        <div class="form-row">
+                            <label for="tags-{{ todo.pk }}">Tags (comma-separated)</label>
+                            <input type="text" id="tags-{{ todo.pk }}" name="tags" 
+                                   value="{% if todo.tag_list %}{{ todo.tag_list|join:', ' }}{% endif %}">
+                        </div>
+                        
+                        <div class="form-actions">
+                            <button type="submit" class="btn-primary">💾 Save Changes</button>
+                            <button type="button" onclick="toggleEditForm({{ todo.pk }})" class="btn-secondary">Cancel</button>
+                        </div>
+                    </form>
                 </div>
                 
                 {% if todo.description %}
@@ -539,16 +613,40 @@
             </div>
         {% endif %}
     </div>
+    
+    <!-- Empty Trash Button (only in trash view) -->
+    {% if view_mode == 'trash' and stats.cancelled > 0 %}
+    <div style="margin-top: 20px; text-align: center;">
+        <form method="POST" action="{% url 'todo_update' id=blog.subdomain pk=0 %}" onsubmit="return confirm('Are you sure you want to permanently delete all items in trash? This cannot be undone.');">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="empty_trash">
+            <button type="submit" class="btn-delete" style="padding: 10px 20px;">🗑️ Empty Trash</button>
+        </form>
+    </div>
+    {% endif %}
 </div>
 
 <script>
+function toggleEditForm(todoId) {
+    const form = document.getElementById('edit-form-' + todoId);
+    if (form) {
+        if (form.style.display === 'none') {
+            form.style.display = 'block';
+        } else {
+            form.style.display = 'none';
+        }
+    }
+}
+
 function toggleRecurringOptions() {
     const checkbox = document.getElementById('is_recurring');
     const options = document.getElementById('recurringOptions');
-    if (checkbox.checked) {
-        options.classList.add('show');
-    } else {
-        options.classList.remove('show');
+    if (checkbox && options) {
+        if (checkbox.checked) {
+            options.classList.add('show');
+        } else {
+            options.classList.remove('show');
+        }
     }
 }
 </script>
