@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>MarkdownX 测试页面</title>
+    <link rel="stylesheet" href="/static/markdownx/admin/css/markdownx.css">
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ccc; }
+        .status { padding: 10px; margin: 5px 0; }
+        .success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+    </style>
+</head>
+<body>
+    <h1>MarkdownX 静态文件测试</h1>
+    
+    <div class="test-section">
+        <h2>静态文件可用性测试</h2>
+        <div id="js-status" class="status">正在检查 JS 文件...</div>
+        <div id="css-status" class="status">正在检查 CSS 文件...</div>
+    </div>
+    
+    <div class="test-section">
+        <h2>MarkdownX 编辑器测试</h2>
+        <div class="markdownx">
+            <textarea id="id-body-content" name="content" class="markdownx-editor" 
+                placeholder="在这里输入 Markdown 内容...">
+# 测试标题
+
+这是一个 **粗体文本** 和 *斜体文本*
+
+- 列表项 1
+- 列表项 2
+
+[链接示例](https://example.com)
+</textarea>
+            <div class="markdownx-preview" id="preview-area" style="margin-top: 10px; padding: 10px; border: 1px solid #ddd; min-height: 100px;"></div>
+        </div>
+    </div>
+
+    <script src="/static/markdownx/js/markdownx.js"></script>
+    <script>
+        // 检查文件是否加载成功
+        document.addEventListener('DOMContentLoaded', function() {
+            // 测试 JS 文件
+            if (typeof Markdownx !== 'undefined' || typeof markdownx !== 'undefined') {
+                document.getElementById('js-status').innerHTML = '✅ JS 文件加载成功';
+                document.getElementById('js-status').className = 'status success';
+            } else {
+                document.getElementById('js-status').innerHTML = '❌ JS 文件加载失败';
+                document.getElementById('js-status').className = 'status error';
+            }
+            
+            // 测试 CSS 文件（通过检查样式应用）
+            const testTextarea = document.createElement('textarea');
+            testTextarea.className = 'markdownx-editor';
+            testTextarea.style.visibility = 'hidden';
+            document.body.appendChild(testTextarea);
+            
+            const computedStyle = window.getComputedStyle(testTextarea);
+            const hasMarkdownxStyle = computedStyle.borderRadius && computedStyle.borderRadius !== '0px';
+            
+            if (hasMarkdownxStyle) {
+                document.getElementById('css-status').innerHTML = '✅ CSS 文件加载成功';
+                document.getElementById('css-status').className = 'status success';
+            } else {
+                document.getElementById('css-status').innerHTML = '⚠️ CSS 文件可能未加载（样式检测不准确）';
+            }
+            
+            document.body.removeChild(testTextarea);
+            
+            // 简单的 MarkdownX 初始化测试
+            console.log('MarkdownX 测试页面加载完成');
+        });
+    </script>
+</body>
+</html>
