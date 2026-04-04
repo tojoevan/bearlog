@@ -5,7 +5,8 @@
 	const $form = document.querySelector('form');
 	const $headerContent = document.getElementById('header_content');
 	const $hiddenHeaderContent = document.getElementById('hidden_header_content');
-	const $textarea = document.querySelector('textarea')
+	// Support both MarkdownX and traditional textarea
+	const $textarea = document.querySelector('textarea.markdownx-editor') || document.querySelector('textarea');
 	const $previewButton = document.getElementById('preview')
 	const $uploadButton = document.getElementById('upload-image')
 

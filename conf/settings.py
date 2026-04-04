@@ -80,6 +80,7 @@ INSTALLED_APPS = [
     'allauth.account',
     'allauth.socialaccount',
     'debug_toolbar',
+    'markdownx',
 ]
 
 AUTHENTICATION_BACKENDS = (
@@ -227,3 +228,15 @@ EMAIL_USE_TLS = True
 
 # Referrer policy
 SECURE_REFERRER_POLICY = "origin-when-cross-origin"
+
+# MarkdownX configuration
+MARKDOWNX_UPLOAD_URLS_PATH = '/markdownx/upload/'
+MARKDOWNX_MARKDOWNIFY_URL = '/markdownx/markdownify/'
+MARKDOWNX_MEDIA_PATH = 'uploads/%Y/%m/%d'
+MARKDOWNX_UPLOAD_MAX_SIZE = 52428800  # 50 MB
+MARKDOWNX_IMAGE_MAX_SIZE = {'size': (2000, 2000), 'quality': 90}
+MARKDOWNX_DEFAULT_ATTRIBUTES = {
+    'class': 'markdownx-editor',
+    'placeholder': 'Start writing your post here...',
+    'style': 'min-height: 500px; width: 100%; border: 1px solid lightgrey; padding: 10px;'
+}

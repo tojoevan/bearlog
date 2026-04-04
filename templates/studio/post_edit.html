@@ -114,12 +114,21 @@ New post | Bear Blog
 
     <input type="hidden" id="hidden_header_content" name="header_content">
 
-    <textarea
-        name="body_content"
-        id="body_content"
-        style="min-height: 500px;border-top: 1px solid lightgrey;"
-        placeholder="..."
-    >{% if post %}{{ post.content }}{% else %}{{ template_body }}{% endif %}</textarea>
+    <!-- MarkdownX Editor -->
+    <div class="markdownx" style="margin-top: 10px;">
+        <textarea
+            name="body_content"
+            id="id_body_content"
+            class="markdownx-editor"
+            data-markdownx-editor-resizable="true"
+            data-markdownx-urls-path="/markdownx/upload/"
+            data-markdownx-latency="500"
+            style="min-height: 500px; width: 100%; border: 1px solid lightgrey; padding: 10px;"
+            placeholder="Start writing your post with Markdown..."
+        >{% if post %}{{ post.content }}{% else %}{{ template_body }}{% endif %}</textarea>
+        
+        <div class="markdownx-preview" style="margin-top: 20px; padding: 10px; border: 1px solid #ddd; min-height: 200px;"></div>
+    </div>
 
     <span class="helptext sticky">
         <span>
@@ -133,6 +142,28 @@ New post | Bear Blog
     </span>
 </form>
 
-{% include '../snippets/editor_functions.html' with blog=blog post=post%}
+{% include '../snippets/editor_functions.html' with blog=blog post=post %}
+
+<!-- MarkdownX Initialization -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize MarkdownX manually if needed
+    if (typeof window.markdownxInit === 'function') {
+        window.markdownxInit();
+    }
+    
+    // Ensure form submission includes header content
+    const $form = document.querySelector('form.post-form');
+    const $headerContent = document.getElementById('header_content');
+    const $hiddenHeaderContent = document.getElementById('hidden_header_content');
+    
+    if ($form && $headerContent && $hiddenHeaderContent) {
+        $form.addEventListener('submit', function(e) {
+            $hiddenHeaderContent.value = $headerContent.innerText;
+        });
+    }
+});
+</script>
+
 {{ request.user.settings.dashboard_footer | safe }}
 {% endblock %}
