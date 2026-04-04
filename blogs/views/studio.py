@@ -978,7 +978,8 @@ def todo_update(request, id, pk):
                         user_tz = ZoneInfo('UTC')
                     aware_datetime = timezone.make_aware(naive_datetime, user_tz)
                     todo.due_date = aware_datetime
-                except:
+                except Exception as e:
+                    print(f"Error parsing due_date in update: {e}")
                     pass
             else:
                 todo.due_date = None
@@ -989,7 +990,31 @@ def todo_update(request, id, pk):
             tag_list = [tag.strip() for tag in tags_str.split(',') if tag.strip()] if tags_str else []
             todo.tags = json.dumps(tag_list)
             
+            # 更新周期性任务属性
+            is_recurring = request.POST.get('is_recurring') == 'on'
+            todo.is_recurring = is_recurring
+            
+            if is_recurring:
+                recurring_type = request.POST.get('recurring_type', '')
+                recurring_interval_str = request.POST.get('recurring_interval', '1')
+                
+                if recurring_type:
+                    todo.recurring_type = recurring_type
+                
+                try:
+                    recurring_interval = int(recurring_interval_str)
+                    if recurring_interval >= 1:
+                        todo.recurring_interval = recurring_interval
+                except:
+                    pass
+            else:
+                # 如果取消周期性，清空相关字段
+                todo.recurring_type = None
+                todo.recurring_interval = 1
+                todo.next_occurrence = None
+            
             todo.save()
+            print(f"✅ Updated todo '{todo.title}' (Recurring: {todo.is_recurring}, Type: {todo.recurring_type})")
         
         return redirect('todo_list', id=blog.subdomain)
     

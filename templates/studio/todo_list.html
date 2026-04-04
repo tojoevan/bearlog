@@ -469,10 +469,20 @@
                 <div class="todo-header">
                     <div class="todo-title-section">
                         <h3 class="todo-title">
-                            {% if todo.status == 'completed' %}✅ {% elif todo.status == 'in_progress' %}🔄 {% elif todo.status == 'cancelled' %}❌ {% else %}⏳ {% endif %}
+                            {% if todo.status == 'completed' %}
+                                ✅ 
+                            {% elif todo.status == 'in_progress' %}
+                                🔄 
+                            {% elif todo.status == 'cancelled' %}
+                                ❌ 
+                            {% else %}
+                                ⏳ 
+                            {% endif %}
                             {{ todo.title }}
                             {% if todo.is_recurring %}
-                                <span class="recurring-badge">🔁 Recurring</span>
+                                <span class="recurring-badge" title="Recurring: {{ todo.get_recurring_type_display }} every {{ todo.recurring_interval }} unit(s)">
+                                    🔁 {{ todo.get_recurring_type_display }}
+                                </span>
                             {% endif %}
                         </h3>
                         <div class="todo-meta">
@@ -482,6 +492,9 @@
                             <span class="status-badge status-{{ todo.status }}">
                                 {{ todo.get_status_display }}
                             </span>
+                            {% if todo.is_recurring and todo.status == 'completed' %}
+                                <span style="color: #4caf50; font-weight: 600;">✓ This cycle completed</span>
+                            {% endif %}
                             {% if todo.due_date %}
                                 <span>📅 Due: {{ todo.due_date|date:"M d, Y H:i" }}</span>
                                 {% if todo.due_date < now and todo.status in 'pending,in_progress' %}
@@ -591,6 +604,40 @@
                                    value="{% if todo.tag_list %}{{ todo.tag_list|join:', ' }}{% endif %}">
                         </div>
                         
+                        <!-- Recurring Task Options -->
+                        <div class="form-row" style="border-top: 1px solid #ddd; padding-top: 15px; margin-top: 15px;">
+                            <div class="checkbox-row" style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
+                                <input type="checkbox" id="is_recurring-{{ todo.pk }}" name="is_recurring" 
+                                       {% if todo.is_recurring %}checked{% endif %}
+                                       onchange="toggleRecurringOptionsEdit({{ todo.pk }})">
+                                <label for="is_recurring-{{ todo.pk }}" style="margin: 0; font-weight: 600;">🔁 Recurring Task</label>
+                            </div>
+                            
+                            <div id="recurring-options-{{ todo.pk }}" class="recurring-options" 
+                                 style="{% if todo.is_recurring %}display: block;{% else %}display: none;{% endif %} padding: 10px; background: white; border-radius: 4px; margin-top: 10px;">
+                                <div class="form-row">
+                                    <label for="recurring_type-{{ todo.pk }}">Repeat Every</label>
+                                    <select id="recurring_type-{{ todo.pk }}" name="recurring_type">
+                                        <option value="daily" {% if todo.recurring_type == 'daily' %}selected{% endif %}>Day(s)</option>
+                                        <option value="weekly" {% if todo.recurring_type == 'weekly' %}selected{% endif %}>Week(s)</option>
+                                        <option value="monthly" {% if todo.recurring_type == 'monthly' %}selected{% endif %}>Month(s)</option>
+                                        <option value="yearly" {% if todo.recurring_type == 'yearly' %}selected{% endif %}>Year(s)</option>
+                                    </select>
+                                </div>
+                                <div class="form-row">
+                                    <label for="recurring_interval-{{ todo.pk }}">Interval</label>
+                                    <input type="number" id="recurring_interval-{{ todo.pk }}" name="recurring_interval" 
+                                           value="{{ todo.recurring_interval|default:1 }}" min="1" 
+                                           placeholder="e.g., 1 for every week, 2 for every 2 weeks">
+                                </div>
+                                {% if todo.is_recurring %}
+                                <div style="font-size: 12px; color: #666; margin-top: 5px;">
+                                    💡 Current: {{ todo.get_recurring_type_display }} every {{ todo.recurring_interval }} unit(s)
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
                         <div class="form-actions">
                             <button type="submit" class="btn-primary">💾 Save Changes</button>
                             <button type="button" onclick="toggleEditForm({{ todo.pk }})" class="btn-secondary">Cancel</button>
@@ -633,6 +680,18 @@ function toggleEditForm(todoId) {
             form.style.display = 'block';
         } else {
             form.style.display = 'none';
+        }
+    }
+}
+
+function toggleRecurringOptionsEdit(todoId) {
+    const checkbox = document.getElementById('is_recurring-' + todoId);
+    const options = document.getElementById('recurring-options-' + todoId);
+    if (checkbox && options) {
+        if (checkbox.checked) {
+            options.style.display = 'block';
+        } else {
+            options.style.display = 'none';
         }
     }
 }

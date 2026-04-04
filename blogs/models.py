@@ -546,73 +546,106 @@ class Todo(models.Model):
         return json.loads(self.tags) if self.tags else []
     
     def complete(self):
-        """完成任务，如果是周期性任务则创建下一个实例"""
+        """
+        完成任务，如果是周期性任务则创建下一个实例
+        
+        行为说明：
+        - 非周期性任务：标记为 completed
+        - 周期性任务：
+          1. 当前实例标记为 completed
+          2. 自动创建下一个周期的新实例（状态为 pending）
+          3. 新实例的 due_date 根据周期类型自动计算
+        """
         from django.utils import timezone
+        
+        # 标记当前任务为已完成
         self.status = 'completed'
         self.completed_date = timezone.now()
         self.save()
         
         # 如果是周期性任务，创建下一个实例
         if self.is_recurring and self.recurring_type:
-            self.create_next_occurrence()
+            next_todo = self.create_next_occurrence()
+            if next_todo:
+                print(f"✅ Recurring task '{self.title}' completed. Next occurrence created for {next_todo.due_date}")
+            else:
+                print(f"⚠️ Failed to create next occurrence for recurring task '{self.title}'")
     
     def create_next_occurrence(self):
-        """为周期性任务创建下一个实例"""
+        """
+        为周期性任务创建下一个实例
+        
+        新实例特性：
+        - status: 'pending' (待处理状态)
+        - due_date: 根据周期类型自动计算
+        - 继承原任务的所有属性（标题、描述、优先级、标签等）
+        
+        Returns:
+            Todo: 新创建的待办事项实例，如果失败则返回 None
+        """
         from django.utils import timezone
         from datetime import timedelta
         
-        if not self.next_occurrence:
-            # 计算下次出现时间
-            now = timezone.now()
-            if self.recurring_type == 'daily':
-                delta = timedelta(days=self.recurring_interval)
-            elif self.recurring_type == 'weekly':
-                delta = timedelta(weeks=self.recurring_interval)
-            elif self.recurring_type == 'monthly':
-                # 简单处理：按月增加
-                month = now.month + self.recurring_interval
-                year = now.year + (month - 1) // 12
-                month = ((month - 1) % 12) + 1
-                try:
-                    next_date = now.replace(year=year, month=month)
-                except ValueError:
-                    # 处理月末日期问题
-                    import calendar
-                    last_day = calendar.monthrange(year, month)[1]
-                    next_date = now.replace(year=year, month=month, day=last_day)
-                delta = next_date - now
-            elif self.recurring_type == 'yearly':
-                try:
-                    next_date = now.replace(year=now.year + self.recurring_interval)
-                except ValueError:
-                    import calendar
-                    last_day = calendar.monthrange(now.year + self.recurring_interval, now.month)[1]
-                    next_date = now.replace(year=now.year + self.recurring_interval, day=last_day)
-                delta = next_date - now
-            else:
-                delta = timedelta(days=self.recurring_interval)
+        try:
+            if not self.next_occurrence:
+                # 计算下次出现时间
+                now = timezone.now()
+                if self.recurring_type == 'daily':
+                    delta = timedelta(days=self.recurring_interval)
+                elif self.recurring_type == 'weekly':
+                    delta = timedelta(weeks=self.recurring_interval)
+                elif self.recurring_type == 'monthly':
+                    # 简单处理：按月增加
+                    month = now.month + self.recurring_interval
+                    year = now.year + (month - 1) // 12
+                    month = ((month - 1) % 12) + 1
+                    try:
+                        next_date = now.replace(year=year, month=month)
+                    except ValueError:
+                        # 处理月末日期问题
+                        import calendar
+                        last_day = calendar.monthrange(year, month)[1]
+                        next_date = now.replace(year=year, month=month, day=last_day)
+                    delta = next_date - now
+                elif self.recurring_type == 'yearly':
+                    try:
+                        next_date = now.replace(year=now.year + self.recurring_interval)
+                    except ValueError:
+                        import calendar
+                        last_day = calendar.monthrange(now.year + self.recurring_interval, now.month)[1]
+                        next_date = now.replace(year=now.year + self.recurring_interval, day=last_day)
+                    delta = next_date - now
+                else:
+                    delta = timedelta(days=self.recurring_interval)
+                
+                self.next_occurrence = now + delta
             
-            self.next_occurrence = now + delta
-        
-        # 创建新的待办事项
-        new_todo = Todo.objects.create(
-            blog=self.blog,
-            title=self.title,
-            description=self.description,
-            status='pending',
-            priority=self.priority,
-            is_recurring=self.is_recurring,
-            recurring_type=self.recurring_type,
-            recurring_interval=self.recurring_interval,
-            due_date=self.next_occurrence,
-            next_occurrence=None,  # 将在下次完成时计算
-            tags=self.tags,
-        )
-        
-        # 更新当前任务的下次出现时间
-        self.save()
-        
-        return new_todo
+            # 创建新的待办事项（状态为 pending）
+            new_todo = Todo.objects.create(
+                blog=self.blog,
+                title=self.title,
+                description=self.description,
+                status='pending',  # 新实例默认为待处理状态
+                priority=self.priority,
+                is_recurring=self.is_recurring,
+                recurring_type=self.recurring_type,
+                recurring_interval=self.recurring_interval,
+                due_date=self.next_occurrence,
+                next_occurrence=None,  # 将在下次完成时计算
+                tags=self.tags,
+            )
+            
+            # 更新当前任务的下次出现时间
+            self.save()
+            
+            print(f"🔁 Created next occurrence: '{new_todo.title}' due on {new_todo.due_date}")
+            return new_todo
+            
+        except Exception as e:
+            print(f"❌ Error creating next occurrence: {e}")
+            import traceback
+            traceback.print_exc()
+            return None
     
     def __str__(self):
         status_icon = {'pending': '⏳', 'in_progress': '🔄', 'completed': '✅', 'cancelled': '❌'}.get(self.status, '')
