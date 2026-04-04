@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block title %}Dashboard | Bear Blog{% endblock %}
 
@@ -6,6 +7,24 @@
     {% include 'styles/blog/default.css' %}
     {% include 'styles/dashboard.css' %}
     {{ request.user.settings.dashboard_styles | safe }}
+    
+    <!-- MarkdownX Styles -->
+    <link rel="stylesheet" href="{% static 'markdownx/css/markdownx.css' %}">
+    <style>
+        .markdownx-editor {
+            width: 100%;
+            min-height: 500px;
+            border: 1px solid lightgrey;
+            padding: 10px;
+            font-family: inherit;
+        }
+        .markdownx-preview {
+            margin-top: 20px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            min-height: 200px;
+        }
+    </style>
 {% endblock %}
 
 {% block nav %}{% include '../snippets/dashboard_nav.html' %}{% endblock %}
@@ -90,14 +109,11 @@
 {% include '../snippets/editor_functions.html' with blog=blog %}
 
 <!-- MarkdownX Initialization -->
+<script src="{% static 'markdownx/js/markdownx.js' %}"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Initialize MarkdownX manually if needed
-    if (typeof window.markdownxInit === 'function') {
-        window.markdownxInit();
-    }
-    
-    // Ensure form submission includes header content
+    // MarkdownX should auto-initialize via data attributes
+    // But we add this handler to ensure header content is saved
     const $form = document.querySelector('form.post-form');
     const $headerContent = document.getElementById('header_content');
     const $hiddenHeaderContent = document.getElementById('hidden_header_content');

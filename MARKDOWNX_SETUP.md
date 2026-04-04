@@ -80,13 +80,15 @@ python manage.py runserver
    - 粘贴图片直接上传
 4. **草稿恢复**: 意外关闭页面后可恢复未保存的草稿
 5. **快捷键**: Ctrl/Cmd + S 快速保存
+6. **自动初始化**: 通过 data 属性自动初始化 MarkdownX 编辑器
 
 ## 注意事项
 
 - MarkdownX 会自动处理 CSRF token
 - 图片上传会保存到 `MEDIA_ROOT/uploads/YYYY/MM/DD/`
-- 编辑器内容会在表单提交时自动同步到隐藏的 textarea
+- 编辑器内容会在表单提交时自动同步
 - 保持与现有功能的兼容性（header content、草稿恢复等）
+- 需要加载 MarkdownX 的静态文件（CSS 和 JS）
 
 ## 样式定制
 
