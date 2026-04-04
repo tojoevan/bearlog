@@ -111,73 +111,47 @@
 <!-- MarkdownX Initialization -->
 <script src="{% static 'markdownx/js/markdownx.js' %}"></script>
 <script>
-// Check if script loaded
-console.log('Script tag executed, checking MarkdownX...');
-console.log('typeof MarkdownX:', typeof MarkdownX);
+console.log('=== MarkdownX Debug Info ===');
+console.log('Script loaded, checking initialization...');
 
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('=== MarkdownX Debug Info ===');
     console.log('DOM Content Loaded');
     
-    // Wait a bit for MarkdownX to initialize
-    setTimeout(() => {
-        // Check if markdownx.js is loaded
-        if (typeof MarkdownX === 'undefined') {
-            console.error('❌ MarkdownX is NOT loaded!');
-            console.error('Possible causes:');
-            console.error('1. Script file not found - check Network tab');
-            console.error('2. Script loading failed - check for CORS errors');
-            console.error('3. Script executed but MarkdownX not defined - check script content');
-            
-            // Try to manually load the script
-            console.log('Attempting to reload markdownx.js...');
-            const script = document.createElement('script');
-            script.src = '/static/markdownx/js/markdownx.js';
-            script.onload = () => {
-                console.log('✅ Script reloaded successfully');
-                console.log('typeof MarkdownX after reload:', typeof MarkdownX);
-            };
-            script.onerror = () => {
-                console.error('❌ Failed to reload script');
-            };
-            document.head.appendChild(script);
-        } else {
-            console.log('✅ MarkdownX library loaded');
-            console.log('MarkdownX version:', MarkdownX.version || 'unknown');
-        }
+    // Check editor elements
+    const editor = document.querySelector('.markdownx-editor');
+    const preview = document.querySelector('.markdownx-preview');
+    const container = document.querySelector('.markdownx');
+    
+    console.log('Editor element:', editor ? '✅ Found' : '❌ Not found');
+    console.log('Preview element:', preview ? '✅ Found' : '❌ Not found');
+    console.log('Container element:', container ? '✅ Found' : '❌ Not found');
+    
+    if (editor) {
+        console.log('Editor value length:', editor.value.length);
+        console.log('Editor data attributes:', {
+            resizable: editor.dataset.markdownxEditorResizable,
+            uploadPath: editor.dataset.markdownxUrlsPath,
+            latency: editor.dataset.markdownxLatency
+        });
         
-        // Check editor elements
-        const editor = document.querySelector('.markdownx-editor');
-        const preview = document.querySelector('.markdownx-preview');
-        const container = document.querySelector('.markdownx');
-        
-        console.log('Editor element:', editor ? '✅ Found' : '❌ Not found');
-        console.log('Preview element:', preview ? '✅ Found' : '❌ Not found');
-        console.log('Container element:', container ? '✅ Found' : '❌ Not found');
-        
-        if (editor) {
-            console.log('Editor value length:', editor.value.length);
-            console.log('Editor data attributes:', {
-                resizable: editor.dataset.markdownxEditorResizable,
-                uploadPath: editor.dataset.markdownxUrlsPath,
-                latency: editor.dataset.markdownxLatency
-            });
-        }
-        
-        // MarkdownX should auto-initialize via data attributes
-        // But we add this handler to ensure header content is saved
-        const $form = document.querySelector('form.post-form');
-        const $headerContent = document.getElementById('header_content');
-        const $hiddenHeaderContent = document.getElementById('hidden_header_content');
-        
-        if ($form && $headerContent && $hiddenHeaderContent) {
-            $form.addEventListener('submit', function(e) {
-                $hiddenHeaderContent.value = $headerContent.innerText;
-            });
-        }
-        
-        console.log('=== End Debug Info ===');
-    }, 100); // Wait 100ms for script to initialize
+        // MarkdownX uses data attributes for auto-initialization
+        // No need to manually create new MarkdownX()
+        console.log('✅ MarkdownX should auto-initialize via data attributes');
+    }
+    
+    // Handler to ensure header content is saved
+    const $form = document.querySelector('form.post-form');
+    const $headerContent = document.getElementById('header_content');
+    const $hiddenHeaderContent = document.getElementById('hidden_header_content');
+    
+    if ($form && $headerContent && $hiddenHeaderContent) {
+        $form.addEventListener('submit', function(e) {
+            $hiddenHeaderContent.value = $headerContent.innerText;
+            console.log('Header content saved');
+        });
+    }
+    
+    console.log('=== End Debug Info ===');
 });
 </script>
 
