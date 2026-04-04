@@ -15,8 +15,11 @@ import random
 from feedgen.feed import FeedGenerator
 
 posts_per_page = 20
+import sys
 
 def resolve_address(request):
+    print(f"DEBUG: MAIN_SITE_HOSTS={os.getenv('MAIN_SITE_HOSTS')}", file=sys.stderr)
+
     http_host = request.get_host()
 
     main_site_hosts = os.getenv('MAIN_SITE_HOSTS', '')

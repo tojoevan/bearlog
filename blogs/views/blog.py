@@ -7,9 +7,12 @@ from django.core.exceptions import ObjectDoesNotExist
 from blogs.models import Blog, Post, Upvote
 from blogs.helpers import salt_and_hash, unmark
 from blogs.views.analytics import render_analytics
+import sys
 
 import os
 def resolve_address(request):
+    print(f"DEBUG: MAIN_SITE_HOSTS={os.getenv('MAIN_SITE_HOSTS')}", file=sys.stderr)
+
     http_host = request.get_host()
 
     main_site_hosts = os.getenv('MAIN_SITE_HOSTS', '')
