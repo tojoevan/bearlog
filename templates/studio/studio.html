@@ -112,6 +112,33 @@
 <script src="{% static 'markdownx/js/markdownx.js' %}"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('=== MarkdownX Debug Info ===');
+    
+    // Check if markdownx.js is loaded
+    if (typeof MarkdownX === 'undefined') {
+        console.error('❌ MarkdownX is NOT loaded!');
+    } else {
+        console.log('✅ MarkdownX library loaded');
+    }
+    
+    // Check editor elements
+    const editor = document.querySelector('.markdownx-editor');
+    const preview = document.querySelector('.markdownx-preview');
+    const container = document.querySelector('.markdownx');
+    
+    console.log('Editor element:', editor ? '✅ Found' : '❌ Not found');
+    console.log('Preview element:', preview ? '✅ Found' : '❌ Not found');
+    console.log('Container element:', container ? '✅ Found' : '❌ Not found');
+    
+    if (editor) {
+        console.log('Editor value length:', editor.value.length);
+        console.log('Editor data attributes:', {
+            resizable: editor.dataset.markdownxEditorResizable,
+            uploadPath: editor.dataset.markdownxUrlsPath,
+            latency: editor.dataset.markdownxLatency
+        });
+    }
+    
     // MarkdownX should auto-initialize via data attributes
     // But we add this handler to ensure header content is saved
     const $form = document.querySelector('form.post-form');
@@ -123,6 +150,8 @@ document.addEventListener('DOMContentLoaded', function() {
             $hiddenHeaderContent.value = $headerContent.innerText;
         });
     }
+    
+    console.log('=== End Debug Info ===');
 });
 </script>
 

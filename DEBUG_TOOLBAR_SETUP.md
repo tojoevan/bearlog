@@ -173,7 +173,35 @@ curl -I http://your-domain.com/static/debug_toolbar/css/toolbar.css
 
 ## 常见问题
 
-### 问题 1: Debug Toolbar 不显示
+### 问题 1: print.css 显示 404 或未被加载
+
+**现象**: 在浏览器开发者工具中看到 `print.css` 显示 404 或没有被请求。
+
+**原因**: 这是**正常行为**！`print.css` 有 `media="print"` 属性，意味着它只在打印页面时才会被加载。
+
+```html
+<link rel="stylesheet" href="{% static 'debug_toolbar/css/print.css' %}" media="print">
+```
+
+**验证方法**:
+1. 按 `Ctrl+P` (Windows/Linux) 或 `Cmd+P` (Mac) 打开打印对话框
+2. 或者在浏览器开发者工具中模拟打印媒体类型：
+   - 打开 DevTools (F12)
+   - 切换到 "Rendering" 标签
+   - 找到 "Emulate CSS media type"
+   - 选择 "print"
+3. 此时你会看到 `print.css` 被加载并生效
+
+**用途**: `print.css` 的作用是在打印页面时隐藏 Debug Toolbar：
+```css
+#djDebug {
+    display: none !important;
+}
+```
+
+**结论**: 如果 `toolbar.css` 正常加载，而 `print.css` 在正常浏览时未加载，这是**预期行为**，不是错误。
+
+### 问题 2: Debug Toolbar 不显示
 
 **可能原因**:
 1. DEBUG = False
@@ -197,7 +225,7 @@ MIDDLEWARE = [
 python manage.py collectstatic --noinput
 ```
 
-### 问题 2: 静态文件 404 错误
+### 问题 3: 静态文件 404 错误
 
 **可能原因**:
 - 静态文件未复制到 `static/` 目录
@@ -212,7 +240,7 @@ python manage.py collectstatic --noinput
 # 重启服务器
 ```
 
-### 问题 3: 生产环境性能问题
+### 问题 4: 生产环境性能问题
 
 **建议**:
 - 只在需要调试时开启 DEBUG=True

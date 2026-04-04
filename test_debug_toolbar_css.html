@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug Toolbar CSS 测试</title>
+    <link rel="stylesheet" href="/static/debug_toolbar/css/toolbar.css">
+    <link rel="stylesheet" href="/static/debug_toolbar/css/print.css" media="print">
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-result { padding: 10px; margin: 10px 0; border: 1px solid #ccc; }
+        .success { background-color: #d4edda; color: #155724; }
+        .info { background-color: #d1ecf1; color: #0c5460; }
+    </style>
+</head>
+<body>
+    <h1>Debug Toolbar CSS 文件测试</h1>
+    
+    <div class="test-result success">
+        <h2>✅ toolbar.css</h2>
+        <p><strong>状态:</strong> 正常加载（无 media 属性）</p>
+        <p><strong>用途:</strong> Debug Toolbar 的主要样式</p>
+        <p><strong>加载时机:</strong> 页面加载时立即应用</p>
+    </div>
+    
+    <div class="test-result info">
+        <h2>ℹ️ print.css</h2>
+        <p><strong>状态:</strong> 已定义但仅在打印时加载</p>
+        <p><strong>用途:</strong> 打印页面时隐藏 Debug Toolbar</p>
+        <p><strong>加载时机:</strong> 仅在打印或打印预览时加载</p>
+        <p><strong>注意:</strong> 在正常浏览时，浏览器<strong>不会</strong>请求此文件，这是预期行为！</p>
+    </div>
+    
+    <h2>如何验证 print.css</h2>
+    <ol>
+        <li>按 <code>Ctrl+P</code> (Windows/Linux) 或 <code>Cmd+P</code> (Mac) 打开打印对话框</li>
+        <li>或者在浏览器开发者工具中：
+            <ul>
+                <li>打开 DevTools (F12)</li>
+                <li>切换到 "Rendering" 标签</li>
+                <li>找到 "Emulate CSS media type"</li>
+                <li>选择 "print"</li>
+            </ul>
+        </li>
+        <li>此时你会看到 print.css 被加载并生效</li>
+    </ol>
+    
+    <h2>print.css 内容</h2>
+    <pre><code>#djDebug {
+    display: none !important;
+}</code></pre>
+    
+    <p>这段 CSS 确保在打印页面时，Debug Toolbar 会被隐藏。</p>
+    
+    <script>
+        // 检查文件是否可以访问
+        fetch('/static/debug_toolbar/css/print.css')
+            .then(response => {
+                if (response.ok) {
+                    console.log('✅ print.css 可以正常访问 (HTTP ' + response.status + ')');
+                } else {
+                    console.error('❌ print.css 访问失败 (HTTP ' + response.status + ')');
+                }
+            })
+            .catch(error => {
+                console.error('❌ print.css 网络错误:', error);
+            });
+        
+        fetch('/static/debug_toolbar/css/toolbar.css')
+            .then(response => {
+                if (response.ok) {
+                    console.log('✅ toolbar.css 可以正常访问 (HTTP ' + response.status + ')');
+                } else {
+                    console.error('❌ toolbar.css 访问失败 (HTTP ' + response.status + ')');
+                }
+            })
+            .catch(error => {
+                console.error('❌ toolbar.css 网络错误:', error);
+            });
+    </script>
+</body>
+</html>
