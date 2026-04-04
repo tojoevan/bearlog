@@ -830,7 +830,8 @@ def todo_list(request, id):
     
     # 按优先级和截止日期排序
     priority_order = {'urgent': 0, 'high': 1, 'medium': 2, 'low': 3}
-    todos = sorted(todos, key=lambda t: (priority_order.get(t.priority, 2), t.due_date or timezone.datetime.max.replace(tzinfo=timezone.utc)))
+    from datetime import timezone as dt_timezone
+    todos = sorted(todos, key=lambda t: (priority_order.get(t.priority, 2), t.due_date or timezone.datetime.max.replace(tzinfo=dt_timezone.utc)))
     
     # 统计信息
     stats = {
@@ -877,7 +878,7 @@ def todo_create(request, id):
         if not title:
             return redirect('todo_list', id=blog.subdomain)
         
-        # 处理截止日期
+        # 处理截止日期 - 如果没有选择时间，默认使用当前时间 + 7天
         due_date = None
         if due_date_str:
             try:
@@ -891,8 +892,13 @@ def todo_create(request, id):
                     user_tz = ZoneInfo('UTC')
                 aware_datetime = timezone.make_aware(naive_datetime, user_tz)
                 due_date = aware_datetime
-            except:
-                pass
+            except Exception as e:
+                print(f"Error parsing due_date: {e}")
+                # 如果解析失败，使用默认值
+                due_date = timezone.now() + timezone.timedelta(days=7)
+        else:
+            # 没有选择时间，默认设置为当前时间 + 7天
+            due_date = timezone.now() + timezone.timedelta(days=7)
         
         # 处理标签
         import json
