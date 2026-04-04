@@ -1,4 +1,4 @@
-.PHONY: dev caddy shell logs 404 migrate makemigrations
+.PHONY: dev caddy shell logs 404 migrate makemigrations deploy-static
 
 dev:
 	echo localhost:1414
@@ -24,3 +24,10 @@ logs:
 
 router:
 	heroku logs --tail --app bear-blog --force-colors | grep "heroku\[router" | grep -Ev "feed"
+
+deploy-static:
+	@echo "🚀 Deploying static files for production..."
+	@./deploy_markdownx_static.sh
+	@./deploy_debug_toolbar_static.sh
+	@python manage.py collectstatic --noinput
+	@echo "✅ Static files deployment complete!"

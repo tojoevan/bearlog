@@ -91,18 +91,30 @@ python manage.py runserver
 - ✅ Django 会自动通过 `AppDirectoriesFinder` 从已安装应用中查找静态文件
 - ✅ **不需要**手动复制静态文件到 `static/` 目录
 - ✅ 只需确保 `STATICFILES_FINDERS` 配置正确
+- ✅ Debug Toolbar 也会自动工作（如果开启 DEBUG）
 
 #### 生产环境 (DEBUG=False)
-在生产环境部署时，需要确保 MarkdownX 的静态文件存在于 `static/markdownx/` 目录：
+在生产环境部署时，需要确保所有第三方包的静态文件存在于 `static/` 目录：
 
-1. **自动复制**（推荐）- 在部署脚本中添加：
+1. **使用 Makefile（推荐）**:
    ```bash
-   cp -R $(python -c "import markdownx; import os; print(os.path.dirname(markdownx.__file__))")/static/markdownx static/
+   make deploy-static
    ```
+   这会自动部署：
+   - MarkdownX 静态文件
+   - Debug Toolbar 静态文件（如果安装了）
+   - 运行 collectstatic
 
-2. **或者手动复制**：
+2. **或者手动部署**:
    ```bash
-   cp -R /path/to/site-packages/markdownx/static/markdownx static/
+   # 部署 MarkdownX
+   ./deploy_markdownx_static.sh
+   
+   # 部署 Debug Toolbar（如果需要）
+   ./deploy_debug_toolbar_static.sh
+   
+   # 收集所有静态文件
+   python manage.py collectstatic --noinput
    ```
 
 3. **验证文件存在**：

@@ -61,7 +61,21 @@ USE_X_FORWARDED_HOST = True
 
 X_FRAME_OPTIONS = 'ALLOWALL'
 
-INTERNAL_IPS = ['127.0.0.1']
+# Internal IPs for Debug Toolbar
+INTERNAL_IPS = [
+    '127.0.0.1',
+    'localhost',
+]
+
+# Debug Toolbar configuration
+if DEBUG:
+    # Allow Debug Toolbar to show in production when DEBUG is True
+    def show_toolbar(request):
+        return True
+    
+    DEBUG_TOOLBAR_CONFIG = {
+        'SHOW_TOOLBAR_CALLBACK': show_toolbar,
+    }
 
 # Application definition
 SITE_ID = 1
