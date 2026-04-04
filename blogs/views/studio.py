@@ -18,7 +18,7 @@ import string
 from blogs.backup import backup_in_thread
 from blogs.forms import AdvancedSettingsForm, BlogForm, DashboardCustomisationForm, PostTemplateForm
 from blogs.helpers import check_connection, is_protected, salt_and_hash
-from blogs.models import Blog, Post, Upvote
+from blogs.models import Blog, Post, Upvote, Todo
 from blogs.subscriptions import get_subscriptions, normalize_plan_type
 
 
@@ -795,3 +795,173 @@ def dashboard_customisation(request):
         form = DashboardCustomisationForm(instance=request.user.settings)
 
     return render(request, 'dashboard/dashboard_customisation.html', {'form': form})
+
+
+@login_required
+def todo_list(request, id):
+    """待办事项列表页面"""
+    if request.user.is_superuser:
+        blog = get_object_or_404(Blog, subdomain=id)
+    else:
+        blog = get_object_or_404(Blog, user=request.user, subdomain=id)
+    
+    # 获取过滤参数
+    status_filter = request.GET.get('status', 'all')
+    priority_filter = request.GET.get('priority', 'all')
+    
+    # 基础查询集
+    todos = Todo.objects.filter(blog=blog)
+    
+    # 应用过滤器
+    if status_filter != 'all':
+        todos = todos.filter(status=status_filter)
+    else:
+        # 默认不显示已完成和已取消的任务
+        todos = todos.exclude(status__in=['completed', 'cancelled'])
+    
+    if priority_filter != 'all':
+        todos = todos.filter(priority=priority_filter)
+    
+    # 按优先级和截止日期排序
+    priority_order = {'urgent': 0, 'high': 1, 'medium': 2, 'low': 3}
+    todos = sorted(todos, key=lambda t: (priority_order.get(t.priority, 2), t.due_date or timezone.datetime.max.replace(tzinfo=timezone.utc)))
+    
+    # 统计信息
+    stats = {
+        'total': Todo.objects.filter(blog=blog).exclude(status__in=['completed', 'cancelled']).count(),
+        'pending': Todo.objects.filter(blog=blog, status='pending').count(),
+        'in_progress': Todo.objects.filter(blog=blog, status='in_progress').count(),
+        'completed': Todo.objects.filter(blog=blog, status='completed').count(),
+        'overdue': Todo.objects.filter(
+            blog=blog,
+            status__in=['pending', 'in_progress'],
+            due_date__lt=timezone.now()
+        ).count() if any(t for t in todos if t.due_date and t.due_date < timezone.now() and t.status in ['pending', 'in_progress']) else 0,
+    }
+    
+    return render(request, 'studio/todo_list.html', {
+        'blog': blog,
+        'todos': todos,
+        'stats': stats,
+        'status_filter': status_filter,
+        'priority_filter': priority_filter,
+    })
+
+
+@login_required
+def todo_create(request, id):
+    """创建待办事项"""
+    if request.user.is_superuser:
+        blog = get_object_or_404(Blog, subdomain=id)
+    else:
+        blog = get_object_or_404(Blog, user=request.user, subdomain=id)
+    
+    if request.method == 'POST':
+        title = request.POST.get('title', '').strip()
+        description = request.POST.get('description', '').strip()
+        priority = request.POST.get('priority', 'medium')
+        due_date_str = request.POST.get('due_date', '')
+        is_recurring = request.POST.get('is_recurring') == 'on'
+        recurring_type = request.POST.get('recurring_type', '') if is_recurring else None
+        recurring_interval = int(request.POST.get('recurring_interval', 1)) if is_recurring else 1
+        tags = request.POST.get('tags', '').strip()
+        
+        if not title:
+            return redirect('todo_list', id=blog.subdomain)
+        
+        # 处理截止日期
+        due_date = None
+        if due_date_str:
+            try:
+                from datetime import datetime as dt
+                naive_datetime = dt.fromisoformat(due_date_str)
+                user_timezone = request.COOKIES.get('timezone', 'UTC')
+                from zoneinfo import ZoneInfo
+                try:
+                    user_tz = ZoneInfo(user_timezone)
+                except:
+                    user_tz = ZoneInfo('UTC')
+                aware_datetime = timezone.make_aware(naive_datetime, user_tz)
+                due_date = aware_datetime
+            except:
+                pass
+        
+        # 处理标签
+        import json
+        tag_list = [tag.strip() for tag in tags.split(',') if tag.strip()] if tags else []
+        
+        # 创建待办事项
+        todo = Todo.objects.create(
+            blog=blog,
+            title=title,
+            description=description,
+            priority=priority,
+            due_date=due_date,
+            is_recurring=is_recurring,
+            recurring_type=recurring_type if is_recurring else None,
+            recurring_interval=recurring_interval if is_recurring else 1,
+            tags=json.dumps(tag_list),
+        )
+        
+        return redirect('todo_list', id=blog.subdomain)
+    
+    return redirect('todo_list', id=blog.subdomain)
+
+
+@login_required
+def todo_update(request, id, pk):
+    """更新待办事项状态"""
+    if request.user.is_superuser:
+        blog = get_object_or_404(Blog, subdomain=id)
+    else:
+        blog = get_object_or_404(Blog, user=request.user, subdomain=id)
+    
+    todo = get_object_or_404(Todo, pk=pk, blog=blog)
+    
+    if request.method == 'POST':
+        action = request.POST.get('action', '')
+        
+        if action == 'complete':
+            todo.complete()
+        elif action == 'start':
+            todo.status = 'in_progress'
+            todo.save()
+        elif action == 'cancel':
+            todo.status = 'cancelled'
+            todo.save()
+        elif action == 'reopen':
+            todo.status = 'pending'
+            todo.completed_date = None
+            todo.save()
+        elif action == 'delete':
+            todo.delete()
+            return redirect('todo_list', id=blog.subdomain)
+        elif action == 'update':
+            # 更新详细信息
+            todo.title = request.POST.get('title', todo.title)
+            todo.description = request.POST.get('description', todo.description)
+            todo.priority = request.POST.get('priority', todo.priority)
+            
+            due_date_str = request.POST.get('due_date', '')
+            if due_date_str:
+                try:
+                    from datetime import datetime as dt
+                    naive_datetime = dt.fromisoformat(due_date_str)
+                    user_timezone = request.COOKIES.get('timezone', 'UTC')
+                    from zoneinfo import ZoneInfo
+                    try:
+                        user_tz = ZoneInfo(user_timezone)
+                    except:
+                        user_tz = ZoneInfo('UTC')
+                    aware_datetime = timezone.make_aware(naive_datetime, user_tz)
+                    todo.due_date = aware_datetime
+                except:
+                    pass
+            else:
+                todo.due_date = None
+            
+            todo.save()
+        
+        return redirect('todo_list', id=blog.subdomain)
+    
+    return redirect('todo_list', id=blog.subdomain)

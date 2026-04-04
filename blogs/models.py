@@ -481,3 +481,139 @@ class PersistentStore(models.Model):
 
     def __str__(self):
         return self.last_executed.strftime('%d %B %Y, %I:%M %p')
+
+
+class Todo(models.Model):
+    """待办事项模型 - 支持多用户、多blog、周期性任务"""
+    blog = models.ForeignKey(Blog, on_delete=models.CASCADE, related_name='todos')
+    title = models.CharField(max_length=200, verbose_name='标题')
+    description = models.TextField(blank=True, default='', verbose_name='描述')
+    
+    # 状态管理
+    STATUS_CHOICES = [
+        ('pending', '待处理'),
+        ('in_progress', '进行中'),
+        ('completed', '已完成'),
+        ('cancelled', '已取消'),
+    ]
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending', db_index=True)
+    
+    # 优先级
+    PRIORITY_CHOICES = [
+        ('low', '低'),
+        ('medium', '中'),
+        ('high', '高'),
+        ('urgent', '紧急'),
+    ]
+    priority = models.CharField(max_length=20, choices=PRIORITY_CHOICES, default='medium', db_index=True)
+    
+    # 时间相关
+    created_date = models.DateTimeField(auto_now_add=True, db_index=True)
+    last_modified = models.DateTimeField(auto_now=True)
+    due_date = models.DateTimeField(blank=True, null=True, db_index=True, verbose_name='截止日期')
+    completed_date = models.DateTimeField(blank=True, null=True, verbose_name='完成日期')
+    
+    # 周期性任务配置
+    is_recurring = models.BooleanField(default=False, db_index=True, verbose_name='是否周期性任务')
+    RECURRING_CHOICES = [
+        ('daily', '每天'),
+        ('weekly', '每周'),
+        ('monthly', '每月'),
+        ('yearly', '每年'),
+        ('custom', '自定义'),
+    ]
+    recurring_type = models.CharField(max_length=20, choices=RECURRING_CHOICES, blank=True, null=True, verbose_name='周期类型')
+    recurring_interval = models.IntegerField(default=1, verbose_name='周期间隔（天/周/月/年）')
+    next_occurrence = models.DateTimeField(blank=True, null=True, db_index=True, verbose_name='下次出现时间')
+    
+    # 标签和分类
+    tags = models.TextField(default='[]', blank=True, verbose_name='标签')
+    
+    # 排序
+    order = models.IntegerField(default=0, db_index=True, verbose_name='排序')
+    
+    class Meta:
+        ordering = ['-order', '-created_date']
+        indexes = [
+            models.Index(fields=['blog', 'status'], name='todo_blog_status'),
+            models.Index(fields=['blog', 'due_date'], name='todo_blog_due_date'),
+            models.Index(fields=['blog', 'is_recurring'], name='todo_blog_recurring'),
+        ]
+    
+    @property
+    def tag_list(self):
+        import json
+        return json.loads(self.tags) if self.tags else []
+    
+    def complete(self):
+        """完成任务，如果是周期性任务则创建下一个实例"""
+        from django.utils import timezone
+        self.status = 'completed'
+        self.completed_date = timezone.now()
+        self.save()
+        
+        # 如果是周期性任务，创建下一个实例
+        if self.is_recurring and self.recurring_type:
+            self.create_next_occurrence()
+    
+    def create_next_occurrence(self):
+        """为周期性任务创建下一个实例"""
+        from django.utils import timezone
+        from datetime import timedelta
+        
+        if not self.next_occurrence:
+            # 计算下次出现时间
+            now = timezone.now()
+            if self.recurring_type == 'daily':
+                delta = timedelta(days=self.recurring_interval)
+            elif self.recurring_type == 'weekly':
+                delta = timedelta(weeks=self.recurring_interval)
+            elif self.recurring_type == 'monthly':
+                # 简单处理：按月增加
+                month = now.month + self.recurring_interval
+                year = now.year + (month - 1) // 12
+                month = ((month - 1) % 12) + 1
+                try:
+                    next_date = now.replace(year=year, month=month)
+                except ValueError:
+                    # 处理月末日期问题
+                    import calendar
+                    last_day = calendar.monthrange(year, month)[1]
+                    next_date = now.replace(year=year, month=month, day=last_day)
+                delta = next_date - now
+            elif self.recurring_type == 'yearly':
+                try:
+                    next_date = now.replace(year=now.year + self.recurring_interval)
+                except ValueError:
+                    import calendar
+                    last_day = calendar.monthrange(now.year + self.recurring_interval, now.month)[1]
+                    next_date = now.replace(year=now.year + self.recurring_interval, day=last_day)
+                delta = next_date - now
+            else:
+                delta = timedelta(days=self.recurring_interval)
+            
+            self.next_occurrence = now + delta
+        
+        # 创建新的待办事项
+        new_todo = Todo.objects.create(
+            blog=self.blog,
+            title=self.title,
+            description=self.description,
+            status='pending',
+            priority=self.priority,
+            is_recurring=self.is_recurring,
+            recurring_type=self.recurring_type,
+            recurring_interval=self.recurring_interval,
+            due_date=self.next_occurrence,
+            next_occurrence=None,  # 将在下次完成时计算
+            tags=self.tags,
+        )
+        
+        # 更新当前任务的下次出现时间
+        self.save()
+        
+        return new_todo
+    
+    def __str__(self):
+        status_icon = {'pending': '⏳', 'in_progress': '🔄', 'completed': '✅', 'cancelled': '❌'}.get(self.status, '')
+        return f"{status_icon} {self.title} ({self.blog.subdomain})"

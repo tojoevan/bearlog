@@ -94,6 +94,11 @@ urlpatterns = [
     # Analytics
     path('<id>/dashboard/analytics/', main_site_only(analytics.analytics), name='analytics'),
 
+    # Todo
+    path('<id>/dashboard/todo/', main_site_only(studio.todo_list), name='todo_list'),
+    path('<id>/dashboard/todo/create/', main_site_only(studio.todo_create), name='todo_create'),
+    path('<id>/dashboard/todo/<int:pk>/update/', main_site_only(studio.todo_update), name='todo_update'),
+
     path('<id>/dashboard/opt-in-review/', main_site_only(dashboard.opt_in_review), name='opt_in_review'),
 
     path('<id>/dashboard/posts/', main_site_only(dashboard.posts_edit), name='posts_edit'),

@@ -6,7 +6,7 @@ from django.utils.html import escape, format_html, format_html_join
 from django.urls import reverse
 from django.utils.safestring import mark_safe
 
-from blogs.models import Blog, PersistentStore, Post, Stylesheet, Upvote, Hit, Subscriber, UserSettings, Media
+from blogs.models import Blog, PersistentStore, Post, Stylesheet, Upvote, Hit, Subscriber, UserSettings, Media, Todo
 
 
 admin.autodiscover()
@@ -251,6 +251,19 @@ class HitAdmin(admin.ModelAdmin):
 class SubscriberAdmin(admin.ModelAdmin):
     raw_id_fields = ('blog',)
     list_display = ('subscribed_date', 'blog', 'email_address')
+
+
+@admin.register(Todo)
+class TodoAdmin(admin.ModelAdmin):
+    raw_id_fields = ('blog',)
+    list_display = ('title', 'blog', 'status', 'priority', 'due_date', 'created_date', 'is_recurring')
+    list_filter = ('status', 'priority', 'is_recurring', 'recurring_type', 'created_date')
+    search_fields = ('title', 'description', 'blog__title', 'blog__subdomain')
+    ordering = ('-created_date',)
+    date_hierarchy = 'created_date'
+    
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related('blog')
 
 
 admin.site.register(Stylesheet)
