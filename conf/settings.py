@@ -223,6 +223,10 @@ STATICFILES_DIRS = [
     BASE_DIR / "static",
 ]
 
+# Media files (for uploads)
+MEDIA_ROOT = BASE_DIR / "media"
+MEDIA_URL = "/media/"
+
 # Static file finders - ensures Django can find static files in both development and production
 STATICFILES_FINDERS = [
     'django.contrib.staticfiles.finders.FileSystemFinder',  # Finds files in STATICFILES_DIRS

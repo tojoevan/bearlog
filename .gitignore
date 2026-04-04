@@ -60,6 +60,7 @@ dev.db
 dev.db.backup
 db.json
 staticfiles/
+media/uploads/
 
 # Flask stuff:
 instance/
