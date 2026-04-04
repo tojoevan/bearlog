@@ -484,6 +484,9 @@
                                     🔁 {{ todo.get_recurring_type_display }}
                                 </span>
                             {% endif %}
+                            {% if todo.is_recurring and todo.status == 'completed' %}
+                                <span style="color: #4caf50; font-weight: 600; margin-left: 10px;">✓ This cycle completed</span>
+                            {% endif %}
                         </h3>
                         <div class="todo-meta">
                             <span class="priority-badge priority-{{ todo.priority }}">
@@ -492,9 +495,6 @@
                             <span class="status-badge status-{{ todo.status }}">
                                 {{ todo.get_status_display }}
                             </span>
-                            {% if todo.is_recurring and todo.status == 'completed' %}
-                                <span style="color: #4caf50; font-weight: 600;">✓ This cycle completed</span>
-                            {% endif %}
                             {% if todo.due_date %}
                                 <span>📅 Due: {{ todo.due_date|date:"M d, Y H:i" }}</span>
                                 {% if todo.due_date < now and todo.status in 'pending,in_progress' %}

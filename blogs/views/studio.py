@@ -1,5 +1,5 @@
 from django.contrib.auth.decorators import login_required
-from django.db import DataError
+from django.db import DataError, models
 from django.forms import ValidationError
 from django.views.decorators.csrf import csrf_exempt
 from django.shortcuts import get_object_or_404, render, redirect
@@ -821,9 +821,23 @@ def todo_list(request, id):
         # 应用过滤器
         if status_filter != 'all':
             todos = todos.filter(status=status_filter)
+        elif status_filter == 'completed':
+            # 如果明确选择查看已完成，显示所有已完成的任务
+            todos = todos.filter(status='completed')
         else:
-            # 默认不显示已完成和已取消的任务
-            todos = todos.exclude(status__in=['completed', 'cancelled'])
+            # 默认视图：显示待处理和进行中的任务
+            # 但对于周期性任务，也显示最近完成的任务（24小时内）
+            from django.utils import timezone as tz
+            recent_completed_cutoff = tz.now() - tz.timedelta(hours=24)
+            
+            todos = todos.filter(
+                models.Q(status__in=['pending', 'in_progress']) |
+                models.Q(
+                    status='completed',
+                    is_recurring=True,
+                    completed_date__gte=recent_completed_cutoff
+                )
+            ).exclude(status='cancelled')
     
     if priority_filter != 'all':
         todos = todos.filter(priority=priority_filter)
