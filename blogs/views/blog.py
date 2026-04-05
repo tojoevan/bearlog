@@ -148,7 +148,29 @@ def bookmark_page(request):
 def bookmark_click(request, pk):
     """处理书签点击，增加点击计数并重定向到实际链接"""
     from django.db.models import F
+    from django.core.cache import cache
+    import hashlib
+    
     bookmark = get_object_or_404(Bookmark, pk=pk)
+    
+    # 获取客户端IP
+    x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+    if x_forwarded_for:
+        ip = x_forwarded_for.split(',')[0].strip()
+    else:
+        ip = request.META.get('REMOTE_ADDR', '')
+    
+    # 生成缓存key：bookmark_click:{bookmark_id}:{ip_hash}
+    ip_hash = hashlib.md5(ip.encode()).hexdigest()[:16]
+    cache_key = f'bookmark_click:{pk}:{ip_hash}'
+    
+    # 检查是否在5分钟内重复点击
+    if cache.get(cache_key):
+        # 重复点击，不计数，直接重定向
+        return redirect(bookmark.url)
+    
+    # 设置缓存，5分钟内同一IP对同一书签不重复计数
+    cache.set(cache_key, True, timeout=300)
     
     # 增加点击计数（使用 F() 表达式避免竞态条件）
     Bookmark.objects.filter(pk=pk).update(clicks=F('clicks') + 1)
