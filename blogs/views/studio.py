@@ -24,7 +24,8 @@ from blogs.subscriptions import get_subscriptions, normalize_plan_type
 
 
 @login_required
-def list(request):
+def blog_list(request):
+    """博客列表页面"""
     blogs = Blog.objects.filter(user=request.user).order_by("created_date")
 
     if request.method == "POST":

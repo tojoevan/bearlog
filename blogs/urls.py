@@ -71,7 +71,7 @@ urlpatterns = [
     path('accounts/delete/', main_site_only(dashboard.delete_user), name='user_delete'),
     path('signup/', main_site_only(signup_flow.signup), name="signup_flow"),
 
-    path('dashboard/', main_site_only(studio.list), name="account"),
+    path('dashboard/', main_site_only(studio.blog_list), name="account"),
     path('dashboard/upgrade/', main_site_only(dashboard.upgrade), name='upgrade'),
     path('dashboard/customise/', main_site_only(studio.dashboard_customisation), name="dashboard_customisation"),
 
