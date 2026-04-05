@@ -46,21 +46,42 @@
 {% endif %}
 
 {% if bookmarks %}
-<section class="bookmark-list">
+<section class="bookmark-section">
     <h2>📚 书签</h2>
-    <ul>
+    <div class="bookmark-grid">
         {% for bookmark in bookmarks %}
-        <li>
-            <a href="{{ bookmark.url }}" target="_blank" rel="noopener noreferrer">
-                {% if bookmark.title %}{{ bookmark.title|safe_title }}{% else %}{{ bookmark.domain }}{% endif %}
-            </a>
-            {% if bookmark.description %}
-            <p>{{ bookmark.description }}</p>
-            {% endif %}
-        </li>
+        <a href="{{ bookmark.url }}" class="bookmark-item" target="_blank" rel="noopener noreferrer">
+            {% if bookmark.title %}{{ bookmark.title|safe_title }}{% else %}{{ bookmark.domain }}{% endif %}
+        </a>
         {% endfor %}
-    </ul>
+    </div>
 </section>
+
+<style>
+.bookmark-section {
+    margin-top: 2rem;
+}
+.bookmark-section h2 {
+    margin-bottom: 1rem;
+}
+.bookmark-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+.bookmark-item {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    background: #f5f5f5;
+    border-radius: 4px;
+    text-decoration: none;
+    color: inherit;
+    font-size: 0.9rem;
+}
+.bookmark-item:hover {
+    background: #e0e0e0;
+}
+</style>
 {% endif %}
 
 {% if posts.empty %}

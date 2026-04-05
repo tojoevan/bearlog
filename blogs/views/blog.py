@@ -96,7 +96,7 @@ def home(request):
     
     # 获取该博客的公开书签
     from blogs.models import Bookmark
-    public_bookmarks = Bookmark.objects.filter(blog=blog, is_public=True).order_by('-order', '-created_date')[:20]
+    public_bookmarks = Bookmark.objects.filter(blog=blog, is_public=True).order_by('-order', '-created_date')[:100]
 
     meta_description = blog.meta_description or unmark(blog.content)[:157] + '...'
 
