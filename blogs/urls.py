@@ -132,8 +132,8 @@ urlpatterns = [
     path('discover/random-blog/', main_site_only(discover.random_blog), name='random_blog'),
 
     # Bookmarks
-    path('discover/bookmarks/', main_site_only(discover.bookmarks), name='bookmarks'),
-    path('discover/bookmarks/hot/', main_site_only(discover.bookmarks_hot), name='bookmarks_hot'),
+    path('bookmarks/', main_site_only(discover.bookmarks), name='bookmarks'),
+    path('bookmarks/hot/', main_site_only(discover.bookmarks_hot), name='bookmarks_hot'),
 
     # Caddy validation
     path('ping/', main_site_only(blog.ping), name='ping'),
