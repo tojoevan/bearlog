@@ -37,15 +37,9 @@
 
 {% block content %}
 
-<h1>📚 书签</h1>
-
 {% if bookmarks %}
 <div class="bookmark-list">
-    {% for bookmark in bookmarks %}
-    <a href="{{ bookmark.url }}" target="_blank" rel="noopener noreferrer">{{ bookmark.title|safe_title }}</a>
-    {% empty %}
-    <span>暂无书签</span>
-    {% endfor %}
+    {% for bookmark in bookmarks %}{% if not forloop.first %} / {% endif %}<a href="{{ bookmark.url }}" target="_blank" rel="noopener noreferrer">{{ bookmark.title|safe_title }}</a>{% empty %}<span>暂无书签</span>{% endfor %}
 </div>
 {% endif %}
 
