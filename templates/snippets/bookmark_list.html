@@ -1,0 +1,19 @@
+{% load custom_tags %}
+
+{% if bookmarks %}
+<section class="bookmark-list">
+    <h2>📚 书签</h2>
+    <ul>
+        {% for bookmark in bookmarks %}
+        <li>
+            <a href="{{ bookmark.url }}" target="_blank" rel="noopener noreferrer">
+                {% if bookmark.title %}{{ bookmark.title|safe_title }}{% else %}{{ bookmark.domain }}{% endif %}
+            </a>
+            {% if bookmark.description %}
+            <p>{{ bookmark.description }}</p>
+            {% endif %}
+        </li>
+        {% endfor %}
+    </ul>
+</section>
+{% endif %}
