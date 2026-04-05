@@ -994,8 +994,10 @@ def todo_update(request, id, pk):
         
         # 处理批量操作
         if action in ['bulk_restore', 'bulk_delete', 'bulk_permanent_delete']:
-            selected_ids = request.POST.getlist('selected_todos')
-            if selected_ids:
+            # selected_todos 是逗号分隔的字符串，如 "1,2,3"
+            selected_ids_str = request.POST.get('selected_todos', '')
+            if selected_ids_str:
+                selected_ids = [int(pk.strip()) for pk in selected_ids_str.split(',') if pk.strip().isdigit()]
                 todos = Todo.objects.filter(pk__in=selected_ids, blog=blog)
                 count = todos.count()
                 
