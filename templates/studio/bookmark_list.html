@@ -143,6 +143,13 @@
             border-radius: 12px;
             font-size: 11px;
             font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .visibility-badge:hover {
+            transform: scale(1.05);
+            box-shadow: 0 1px 4px rgba(0,0,0,0.15);
         }
         
         .visibility-public {
@@ -153,6 +160,11 @@
         .visibility-private {
             background: #fff3e0;
             color: #e65100;
+        }
+        
+        .visibility-badge.loading {
+            opacity: 0.6;
+            pointer-events: none;
         }
         
         .bookmark-stats-badge {
@@ -521,7 +533,10 @@
                         <a href="{{ bookmark.url }}" target="_blank" rel="noopener" class="bookmark-url">{{ bookmark.url }}</a>
                         <div class="bookmark-domain">{{ bookmark.domain }}</div>
                         <div class="bookmark-meta">
-                            <span class="visibility-badge visibility-{% if bookmark.is_public %}public{% else %}private{% endif %}">
+                            <span class="visibility-badge visibility-{% if bookmark.is_public %}public{% else %}private{% endif %}"
+                                  onclick="toggleVisibility({{ bookmark.pk }})"
+                                  data-bookmark-id="{{ bookmark.pk }}"
+                                  title="Click to toggle privacy">
                                 {% if bookmark.is_public %}🔓 Public{% else %}🔒 Private{% endif %}
                             </span>
                             <span class="bookmark-stats-badge">👆 {{ bookmark.clicks }} clicks</span>
@@ -668,7 +683,7 @@ document.getElementById('quick-url').addEventListener('blur', async function() {
 document.getElementById('quickAddForm').addEventListener('submit', function(e) {
     const urlInput = document.getElementById('quick-url');
     const titleInput = document.getElementById('quick-title');
-    
+
     if (urlInput.value.trim() && !titleInput.value.trim()) {
         // Extract domain as title if empty
         try {
@@ -682,5 +697,48 @@ document.getElementById('quickAddForm').addEventListener('submit', function(e) {
         }
     }
 });
+
+// Toggle bookmark visibility (Public/Private)
+async function toggleVisibility(bookmarkId) {
+    const badge = document.querySelector(`[data-bookmark-id="${bookmarkId}"]`);
+    if (!badge) return;
+
+    // Prevent double-clicks
+    if (badge.classList.contains('loading')) return;
+
+    badge.classList.add('loading');
+    const originalText = badge.textContent;
+
+    try {
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value;
+        const formData = new FormData();
+        formData.append('action', 'toggle_visibility');
+
+        const response = await fetch(`/{{ blog.subdomain }}/dashboard/bookmark/${bookmarkId}/update/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': csrfToken || '',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: formData
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            // Update badge appearance
+            badge.textContent = data.label;
+            badge.classList.remove('visibility-public', 'visibility-private');
+            badge.classList.add(`visibility-${data.badge_class}`);
+        } else {
+            badge.textContent = originalText;
+        }
+    } catch (error) {
+        console.error('Error toggling visibility:', error);
+        badge.textContent = originalText;
+    } finally {
+        badge.classList.remove('loading');
+    }
+}
 </script>
 {% endblock %}

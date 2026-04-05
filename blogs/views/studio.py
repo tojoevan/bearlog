@@ -1292,6 +1292,19 @@ def bookmark_update(request, id, pk):
             bookmark.url = request.POST.get('url', bookmark.url).strip()
             bookmark.description = request.POST.get('description', bookmark.description).strip()
             bookmark.is_public = request.POST.get('is_public') == 'on'
+        
+        elif action == 'toggle_visibility':
+            # 切换隐私状态
+            bookmark.is_public = not bookmark.is_public
+            bookmark.save()
+            # 返回 JSON 响应
+            from django.http import JsonResponse
+            return JsonResponse({
+                'success': True,
+                'is_public': bookmark.is_public,
+                'label': '🔓 Public' if bookmark.is_public else '🔒 Private',
+                'badge_class': 'public' if bookmark.is_public else 'private'
+            })
             
             # 验证URL
             if bookmark.url:
