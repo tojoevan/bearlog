@@ -141,7 +141,7 @@ def upload_files(blog, file_list, optimise=True):
         file_name = new_file_name
         
         filepath = f'{blog.subdomain}/{file_name}.{extension}'
-        url = f'https://pub-d3cdb3e12f644a39ae6f21c50fed1f89.r2.dev/{filepath}'
+        url = f'https://r2.kapibala.icu/{filepath}'
         file_links.append(url)
 
         # Create Media object first
@@ -269,7 +269,7 @@ def get_uploaded_images(blog):
         return []
 
     image_urls = [
-        f'https://pub-d3cdb3e12f644a39ae6f21c50fed1f89.r2.dev/{item["Key"]}'
+        f'https://r2.kapibala.icu/{item["Key"]}'
         for item in response['Contents']
         if item['Key'].split('.')[-1].lower() in file_types
     ]
@@ -299,7 +299,7 @@ def delete_selected_media(request, id):
         for url in selected_media:
             print(url)
             if Media.objects.filter(blog=blog, url=url).exists():
-                key = url.replace(f'https://pub-d3cdb3e12f644a39ae6f21c50fed1f89.r2.dev/', '')
+                key = url.replace(f'https://r2.kapibala.icu/', '')
                 print(f"Deleting key: {key}")
                 response = client.delete_object(Bucket=bucket_name, Key=key)
                 # print("S3 Response:", response)
