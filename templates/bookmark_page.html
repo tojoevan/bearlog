@@ -1,0 +1,169 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load custom_tags %}
+
+{% block page_type %}bookmark{% endblock %}
+
+{% block lang %}{{ blog.lang }}{% endblock %}
+
+{% block favicon %}{% include 'snippets/favicon.html' with blog=blog %}{% endblock %}
+
+{% block title %}{{ blog.title }} - 书签{% endblock %}
+
+{% block canonical %}<link rel="canonical" href="{{ blog.useful_domain }}/bookmark/">{% endblock %}
+
+{% block seo %}
+{% if not blog.reviewed %}<meta name="robots" content="noindex, nofollow">{% endif %}
+
+<meta name="{{ blog.subdomain }}" content="look-for-the-bear-necessities">
+
+{% include 'snippets/seo_tags.html' with site_name=blog.title title=blog.title|add:" - 书签" type="website" url=blog.useful_domain|add:"/bookmark/" description=meta_description %}
+{% endblock %}
+
+{% block imports %}
+{% if blog.user.settings.upgraded %}{{ blog.header_directive | safe }}{% endif %}
+
+{% if blog.fathom_site_id %}<script src="https://cdn.usefathom.com/script.js" data-site="{{ blog.fathom_site_id }}" defer></script>{% endif %}
+{% endblock %}
+
+{% block custom_styles %}{% include 'snippets/styles.html' with blog=blog %}{% endblock %}
+
+{% block heading %}{{ blog.title }}{% endblock %}
+
+{% block nav %}{% markdown content=blog.nav blog=blog post=None tz=tz %}{% endblock %}
+
+{% block content %}
+
+<section class="bookmark-page">
+    <h1>📚 书签</h1>
+    
+    {% if bookmarks %}
+    <ul class="bookmark-list">
+        {% for bookmark in bookmarks %}
+        <li>
+            <a href="{{ bookmark.url }}" target="_blank" rel="noopener noreferrer">
+                {% if bookmark.title %}{{ bookmark.title|safe_title }}{% else %}{{ bookmark.domain }}{% endif %}
+            </a>
+            {% if bookmark.description %}
+            <p class="description">{{ bookmark.description }}</p>
+            {% endif %}
+            <span class="domain">{{ bookmark.domain }}</span>
+        </li>
+        {% endfor %}
+    </ul>
+    
+    {% if previous_page >= 0 or next_page %}
+    <nav class="pagination">
+        {% if previous_page >= 0 %}
+        <a href="?page={{ previous_page }}">← 上一页</a>
+        {% endif %}
+        <span class="page-info">{{ posts_from|add:1 }}-{{ posts_from|add:bookmarks|length }} / {{ total_items }}</span>
+        <a href="?page={{ next_page }}">下一页 →</a>
+    </nav>
+    {% endif %}
+    
+    {% else %}
+    <p>暂无书签</p>
+    {% endif %}
+</section>
+
+<style>
+.bookmark-page {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 1rem;
+}
+
+.bookmark-page h1 {
+    margin-bottom: 1.5rem;
+}
+
+.bookmark-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.bookmark-list li {
+    padding: 0.75rem;
+    margin-bottom: 0.5rem;
+    border-bottom: 1px solid #eee;
+}
+
+.bookmark-list li:hover {
+    background: #f9f9f9;
+}
+
+.bookmark-list li:last-child {
+    border-bottom: none;
+}
+
+.bookmark-list .description {
+    margin: 0.25rem 0;
+    color: #666;
+    font-size: 0.9rem;
+}
+
+.bookmark-list .domain {
+    font-size: 0.8rem;
+    color: #999;
+}
+
+.pagination {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    margin-top: 2rem;
+    padding: 1rem;
+}
+
+.pagination .page-info {
+    color: #666;
+}
+
+.pagination a {
+    padding: 0.5rem 1rem;
+    background: #f0f0f0;
+    border-radius: 4px;
+    text-decoration: none;
+}
+
+.pagination a:hover {
+    background: #e0e0e0;
+}
+</style>
+
+{% if blog.analytics_active %}
+    <script>
+    window.addEventListener("load", () => {
+        if (navigator.webdriver !== true) {
+            const sendHit = score => {
+                const params = new URLSearchParams({
+                    blog: "{{ blog.subdomain }}",
+                    token: "/bookmark/",
+                    referrer: document.referrer.includes("{{ blog.blank_useful_domain }}") ? "" : document.referrer,
+                    title: "",
+                    score: score
+                });
+                new Image().src = `/hit/?${params.toString()}`;
+            };
+
+            document.addEventListener('touchmove', () => sendHit(100), { once: true });
+            document.addEventListener('mousemove', () => sendHit(100), { once: true });
+        }
+    });
+    </script>
+{% endif %}
+
+{% endblock %}
+
+{% block footer %}
+{% if blog.user.settings.upgraded and blog.footer_directive %}
+<span id="footer-directive">
+    {% markdown content=blog.footer_directive blog=blog post=None tz=tz %}
+</span>
+{% endif %}
+<span>
+    在 <a href="https://kapibala.icu/">Kapibala</a> <span class="bear" role="img" aria-label="ASCII Kapibala logo">[-ᴥ-]</span>，安静的写作，并致敬<a href="https://herman.bearblog.dev"> Herman </a>。
+</span>
+{% endblock %}

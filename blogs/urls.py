@@ -166,6 +166,9 @@ urlpatterns = [
     path("rss.xml", main_site_only(feed.feed)),
     path("index.xml", main_site_only(feed.feed)),
 
+    # Blog pages (need to be before slug route)
+    path('bookmark/', blog.bookmark_page, name='bookmark_page'),
+
     # Generic path endpoint for slugs
     path('<path:slug>/', blog.post, name='post'),
 ]

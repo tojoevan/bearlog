@@ -122,6 +122,51 @@ def index(request):
     return render(request, 'index.html')
 
 
+def bookmark_page(request):
+    """用户博客的书签页面"""
+    blog = resolve_address(request)
+    if not blog:
+        return not_found(request)
+    
+    # 获取该博客的公开书签
+    from blogs.models import Bookmark
+    bookmarks = Bookmark.objects.filter(blog=blog, is_public=True).order_by('-order', '-created_date')
+    
+    # 分页
+    try:
+        page = int(request.GET.get("page", 0) or 0)
+    except ValueError:
+        page = 0
+    
+    items_per_page = 50
+    posts_from = page * items_per_page
+    posts_to = (page * items_per_page) + items_per_page
+    
+    total_items = bookmarks.count()
+    bookmarks = bookmarks[posts_from:posts_to]
+    
+    meta_description = f"{blog.title} 的书签收藏"
+    
+    response = render(
+        request,
+        'bookmark_page.html',
+        {
+            'blog': blog,
+            'bookmarks': bookmarks,
+            'meta_description': meta_description,
+            'previous_page': page - 1,
+            'next_page': page + 1,
+            'posts_from': posts_from,
+            'total_items': total_items,
+        }
+    )
+    
+    response['Cache-Tag'] = blog.subdomain
+    response['Cache-Control'] = "public, s-maxage=43200, max-age=0"
+    
+    return response
+
+
 def posts(request, blog):
     if not blog:
         blog = resolve_address(request)
