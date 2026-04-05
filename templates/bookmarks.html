@@ -15,21 +15,18 @@
 {% block content %}
 
 <h1>
-    {% if hot %}
-    🔥 热门分享
-    {% else %}
-    {% if newest %}
-    🆕 最新分享
-    {% else %}
     精彩分享
-    {% endif %}
-    {% endif %}
 </h1>
 
 <nav>
     <a href="/">热榜</a>
+    {% if not newest %}
     <b><a href="/bookmarks/">书签</a></b>
     <a href="/bookmarks/?newest=true">最新</a>
+    {% else %}
+    <a href="/bookmarks/">书签</a>
+    <b><a href="/bookmarks/?newest=true">最新</a></b>
+    {% endif %}
     <a href="/discover/search/">搜索</a>
     <a href="/accounts/login/">登录</a>
 </nav>
