@@ -93,10 +93,6 @@ def home(request):
         return render(request, 'landing.html')
 
     all_posts = blog.posts.filter(publish=True, published_date__lte=timezone.now(), is_page=False).order_by('-published_date')
-    
-    # 获取该博客的公开书签
-    from blogs.models import Bookmark
-    public_bookmarks = Bookmark.objects.filter(blog=blog, is_public=True).order_by('-order', '-created_date')[:100]
 
     meta_description = blog.meta_description or unmark(blog.content)[:157] + '...'
 
@@ -106,7 +102,6 @@ def home(request):
         {
             'blog': blog,
             'posts': all_posts,
-            'bookmarks': public_bookmarks,
             'meta_description': meta_description
         }
     )
