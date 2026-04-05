@@ -40,34 +40,13 @@
 <h1>📚 书签</h1>
 
 {% if bookmarks %}
-<ul class="blog-posts">
+<div class="bookmark-list">
     {% for bookmark in bookmarks %}
-    <li>
-        <span>
-            <i>
-                {% include './snippets/formatted_date.html' with date=bookmark.created_date %}
-            </i>
-        </span>
-        <a href="{{ bookmark.url }}" target="_blank" rel="noopener noreferrer">{{ bookmark.title|safe_title }}</a>
-        {% if bookmark.description %}
-        <p>{{ bookmark.description }}</p>
-        {% endif %}
-    </li>
+    <a href="{{ bookmark.url }}" target="_blank" rel="noopener noreferrer">{{ bookmark.title|safe_title }}</a>
     {% empty %}
-    <li>暂无书签</li>
+    <span>暂无书签</span>
     {% endfor %}
-</ul>
-
-{% if previous_page >= 0 or next_page %}
-<nav class="pagination">
-    {% if previous_page >= 0 %}
-    <a href="?page={{ previous_page }}">← 上一页</a>
-    {% endif %}
-    <span class="page-info">{{ posts_from|add:1 }}-{{ posts_from|add:bookmarks|length }} / {{ total_items }}</span>
-    <a href="?page={{ next_page }}">下一页 →</a>
-</nav>
-{% endif %}
-
+</div>
 {% endif %}
 
 {% if blog.analytics_active %}

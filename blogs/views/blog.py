@@ -130,20 +130,7 @@ def bookmark_page(request):
     
     # 获取该博客的公开书签
     from blogs.models import Bookmark
-    bookmarks = Bookmark.objects.filter(blog=blog, is_public=True).order_by('-order', '-created_date')
-    
-    # 分页
-    try:
-        page = int(request.GET.get("page", 0) or 0)
-    except ValueError:
-        page = 0
-    
-    items_per_page = 50
-    posts_from = page * items_per_page
-    posts_to = (page * items_per_page) + items_per_page
-    
-    total_items = bookmarks.count()
-    bookmarks = bookmarks[posts_from:posts_to]
+    bookmarks = Bookmark.objects.filter(blog=blog, is_public=True).order_by('-order', '-created_date')[:500]
     
     meta_description = f"{blog.title} 的书签收藏"
     
@@ -154,10 +141,6 @@ def bookmark_page(request):
             'blog': blog,
             'bookmarks': bookmarks,
             'meta_description': meta_description,
-            'previous_page': page - 1,
-            'next_page': page + 1,
-            'posts_from': posts_from,
-            'total_items': total_items,
         }
     )
     
