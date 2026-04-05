@@ -1,15 +1,14 @@
 {% extends 'base.html' %}
 
-{% block title %}{% if hot %}热门书签{% else %}{% if newest %}最新书签{% else %}书签发现{% endif %}{% endif %} | Kapibala Blog{% endblock %}
+{% block title %}{% if hot %}🔥 热门分享{% else %}{% if newest %}🆕 最新分享{% else %}精彩分享{% endif %}{% endif %} | Kapibala Blog{% endblock %}
 
 {% block seo %}
 <meta name="robots" content="nofollow">
-{% include 'snippets/seo_tags.html' with site_name='[-ᴥ-] Kapibala Blog' type="website" title='书签发现' url='https://kapibala.icu/discover/bookmarks/' description='发现精彩书签收藏' image="https://bear-images.sfo2.cdn.digitaloceanspaces.com/herman-1683556668-0.png" %}
-<link rel="alternate" type="application/atom+xml" href="/feed/{% if newest %}?newest=True{% endif %}" title="{% if newest %}最新{% else %}热门{% endif %} | Kapibala Bookmarks">
+{% include 'snippets/seo_tags.html' with site_name='[-ᴥ-] Kapibala Blog' type="website" title='精彩分享' url='https://kapibala.icu/bookmarks/' description='发现精彩书签收藏' image="https://bear-images.sfo2.cdn.digitaloceanspaces.com/herman-1683556668-0.png" %}
+<link rel="alternate" type="application/atom+xml" href="/feed/{% if newest %}?newest=true{% endif %}" title="{% if newest %}最新{% else %}热门{% endif %} | Kapibala Bookmarks">
 {% endblock %}
 
-{% block nav %}
-{% endblock %}
+{% block nav %}{% endblock %}
 
 {% block page_type %}discover{% endblock %}
 
@@ -17,22 +16,22 @@
 
 <h1>
     {% if hot %}
-    🔥 热门书签
+    🔥 热门分享
     {% else %}
     {% if newest %}
-    🆕 最新书签
+    🆕 最新分享
     {% else %}
-    📚 书签发现
+    精彩分享
     {% endif %}
     {% endif %}
 </h1>
 
 <nav>
-    <a href="/discover/bookmarks/">发现</a>
-    <b><a href="/discover/bookmarks/hot/">🔥 热榜</a></b>
-    <b><a href="/discover/bookmarks/?newest=true">🆕 最新</a></b>
+    <a href="/bookmarks/">发现</a>
+    <b><a href="/bookmarks/hot/">🔥 热榜</a></b>
+    <b><a href="/bookmarks/?newest=true">🆕 最新</a></b>
     <a href="/">热文</a>
-    <a href="/discover/search/">搜索</a>
+    <a href="/search/">搜索</a>
     <a href="/accounts/login/">登录</a>
 </nav>
 
@@ -48,7 +47,7 @@
 {% endfor %}</textarea>
         <br>
         
-        <button onclick="document.cookie='hide_list=' + document.getElementById('hidden-blogs').value.split('\n').join(',') + '; path=/discover/; expires=Fri, 31 Dec 9999 23:59:59 GMT'; location.reload();">Save</button>
+        <button onclick="document.cookie='hide_list=' + document.getElementById('hidden-blogs').value.split('\n').join(',') + '; path=/bookmarks/; expires=Fri, 31 Dec 9999 23:59:59 GMT'; location.reload();">Save</button>
         <br>
         从发现列表中隐藏博客。
     </details>
@@ -130,6 +129,6 @@
 {% block footer %}
 
 <p>
-    在 <a href="https://kapibala.icu/">Kapibala</a> <span class="bear" role="img" aria-label="ASCII Kapibala logo">[-ᴥ-]</span>，安静的写作，并致敬<a href="https://herman.bearblog.dev"> Herman </a>。
+    在 <a href="https://kapibala.icu/">Kapibala</a> <span class="bear" role="img" aria-label="ASCII bear logo">[-ᴥ-]</span>，安静的写作，并致敬<a href="https://herman.bearblog.dev"> Herman </a>。
 </p>
 {% endblock %}
