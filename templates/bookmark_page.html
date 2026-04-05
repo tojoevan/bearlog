@@ -50,7 +50,7 @@
 
 {% if bookmarks %}
 <div class="bookmark-list">
-    {% for bookmark in bookmarks %}{% if not forloop.first %} / {% endif %}<a href="/bookmark/{{ bookmark.pk }}/click/" target="_blank" rel="noopener noreferrer">{{ bookmark.title|safe_title }}</a>{% empty %}<span>暂无书签</span>{% endfor %}
+    {% for bookmark in bookmarks %}{% if not forloop.first %} / {% endif %}<a href="/bookmark/{{ bookmark.pk }}/click/" target="_blank" rel="noopener noreferrer" title="{{ bookmark.url }}">{{ bookmark.title|safe_title }}</a>{% empty %}<span>暂无书签</span>{% endfor %}
 </div>
 {% endif %}
 
