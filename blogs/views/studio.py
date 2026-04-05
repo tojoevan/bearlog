@@ -1117,6 +1117,8 @@ def bookmark_list(request, id):
     
     # 获取过滤参数
     visibility_filter = request.GET.get('visibility', 'all')
+    sort_by = request.GET.get('sort', 'newest')
+    search_query = request.GET.get('search', '').strip()
     
     # 分页参数
     items_per_page = 30
@@ -1125,14 +1127,29 @@ def bookmark_list(request, id):
     # 基础查询集
     bookmarks = Bookmark.objects.filter(blog=blog)
     
-    # 应用过滤器
+    # 应用搜索过滤
+    if search_query:
+        bookmarks = bookmarks.filter(
+            models.Q(title__icontains=search_query) |
+            models.Q(url__icontains=search_query) |
+            models.Q(description__icontains=search_query)
+        )
+    
+    # 应用可见性过滤器
     if visibility_filter == 'public':
         bookmarks = bookmarks.filter(is_public=True)
     elif visibility_filter == 'private':
         bookmarks = bookmarks.filter(is_public=False)
     
     # 排序
-    bookmarks = bookmarks.order_by('-order', '-created_date')
+    if sort_by == 'oldest':
+        bookmarks = bookmarks.order_by('created_date')
+    elif sort_by == 'clicks':
+        bookmarks = bookmarks.order_by('-clicks', '-created_date')
+    elif sort_by == 'alpha':
+        bookmarks = bookmarks.order_by('title')
+    else:  # newest (default)
+        bookmarks = bookmarks.order_by('-created_date')
     
     # 分页
     total_items = bookmarks.count()
@@ -1175,6 +1192,8 @@ def bookmark_list(request, id):
         'bookmarks': paginated_bookmarks,
         'stats': stats,
         'visibility_filter': visibility_filter,
+        'sort_by': sort_by,
+        'search_query': search_query,
         'page': page,
         'total_pages': total_pages,
         'total_items': total_items,
@@ -1198,7 +1217,7 @@ def bookmark_create(request, id):
         is_public = request.POST.get('is_public') == 'on'
         tags = request.POST.get('tags', '').strip()
         
-        if not title or not url:
+        if not url:
             return redirect('bookmark_list', id=blog.subdomain)
         
         # 验证URL格式
@@ -1206,7 +1225,24 @@ def bookmark_create(request, id):
             validator = URLValidator()
             validator(url)
         except ValidationError:
-            return redirect('bookmark_list', id=blog.subdomain)
+            # 尝试添加 https:// 前缀
+            if not url.startswith(('http://', 'https://')):
+                url = 'https://' + url
+                try:
+                    validator(url)
+                except ValidationError:
+                    return redirect('bookmark_list', id=blog.subdomain)
+        
+        # 如果标题为空，使用域名
+        if not title:
+            from urllib.parse import urlparse
+            try:
+                parsed = urlparse(url)
+                domain = parsed.netloc.replace('www.', '')
+                # 首字母大写
+                title = domain.charAt(0).upper() + domain[1:] if domain else url
+            except:
+                title = url
         
         # 处理标签
         import json
