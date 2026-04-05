@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% load static %}
+{% load static custom_tags %}
 
 {% block title %}Todo | {{ blog.title }}{% endblock %}
 
@@ -323,6 +323,89 @@
         .empty-state h3 {
             margin-bottom: 10px;
         }
+        
+        .bulk-actions {
+            display: none;
+            background: #fff3e0;
+            padding: 10px 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            border: 1px solid #ffb74d;
+            align-items: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .bulk-actions.show {
+            display: flex;
+        }
+        
+        .bulk-actions span {
+            font-weight: 600;
+            color: #e65100;
+        }
+        
+        .bulk-actions button {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+        }
+        
+        .bulk-restore {
+            background: #4caf50;
+            color: white;
+        }
+        
+        .bulk-delete {
+            background: #f44336;
+            color: white;
+        }
+        
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 5px;
+            margin: 30px 0;
+            flex-wrap: wrap;
+        }
+        
+        .pagination a, .pagination span {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            text-decoration: none;
+            color: #333;
+            font-size: 14px;
+        }
+        
+        .pagination a:hover {
+            background: #f5f5f5;
+        }
+        
+        .pagination .current {
+            background: #2196f3;
+            color: white;
+            border-color: #2196f3;
+        }
+        
+        .pagination .disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .pagination-info {
+            text-align: center;
+            color: #666;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+        
+        .select-all-checkbox {
+            margin-right: 10px;
+        }
     </style>
 {% endblock %}
 
@@ -438,7 +521,7 @@
     <div class="todo-filters">
         {% if view_mode == 'trash' %}
             <a href="?view=active" style="font-weight: 600;">← Back to Active Todos</a>
-            <span style="margin-left: auto; color: #666;">🗑️ Trash View - Showing Cancelled Items</span>
+            <span style="margin-left: auto; color: #666;">🗑️ Trash View</span>
         {% else %}
             <label>Filter by Status:</label>
             <select onchange="window.location.href='?status=' + this.value + '&priority={{ priority_filter }}&view=active'">
@@ -463,10 +546,32 @@
     
     <!-- Todo List -->
     <div class="todo-list">
+        {% if view_mode == 'trash' and todos %}
+            <!-- Bulk Actions Bar (Trash) -->
+            <div class="bulk-actions" id="bulkActions">
+                <span id="selectedCount">0 selected</span>
+                <form method="POST" action="{% url 'todo_update' id=blog.subdomain pk=0 %}" style="display: inline;">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="bulk_restore">
+                    <input type="hidden" name="selected_todos" id="bulkRestoreIds">
+                    <button type="submit" class="bulk-restore" onclick="return confirm('Restore selected items?');">♻️ Restore Selected</button>
+                </form>
+                <form method="POST" action="{% url 'todo_update' id=blog.subdomain pk=0 %}" style="display: inline;">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="bulk_permanent_delete">
+                    <input type="hidden" name="selected_todos" id="bulkDeleteIds">
+                    <button type="submit" class="bulk-delete" onclick="return confirm('Permanently delete selected items? This cannot be undone.');">🗑️ Delete Permanently</button>
+                </form>
+            </div>
+        {% endif %}
+        
         {% if todos %}
             {% for todo in todos %}
             <div class="todo-item {% if todo.status == 'completed' %}completed{% endif %} {% if todo.due_date and todo.due_date < now and todo.status in 'pending,in_progress' %}overdue{% endif %}">
                 <div class="todo-header">
+                    {% if view_mode == 'trash' %}
+                    <input type="checkbox" class="todo-checkbox select-all-checkbox" name="todo_{{ todo.pk }}" value="{{ todo.pk }}" onchange="updateBulkActions()">
+                    {% endif %}
                     <div class="todo-title-section">
                         <h3 class="todo-title">
                             {% if todo.status == 'completed' %}
@@ -670,6 +775,40 @@
         </form>
     </div>
     {% endif %}
+    
+    <!-- Pagination -->
+    {% if total_pages > 1 %}
+    <div class="pagination-info">
+        Showing {{ page }} of {{ total_pages }} pages ({{ total_items }} items)
+    </div>
+    <div class="pagination">
+        {% if page > 1 %}
+            <a href="?view={{ view_mode }}&page=1{% if status_filter != 'all' %}&status={{ status_filter }}{% endif %}{% if priority_filter != 'all' %}&priority={{ priority_filter }}{% endif %}">« First</a>
+            <a href="?view={{ view_mode }}&page={{ page|add:"-1" }}{% if status_filter != 'all' %}&status={{ status_filter }}{% endif %}{% if priority_filter != 'all' %}&priority={{ priority_filter }}{% endif %}">‹ Prev</a>
+        {% else %}
+            <span class="disabled">« First</span>
+            <span class="disabled">‹ Prev</span>
+        {% endif %}
+        
+        {% for p in paginator_range %}
+            {% if p == '...' %}
+                <span class="disabled">...</span>
+            {% elif p == page %}
+                <span class="current">{{ p }}</span>
+            {% else %}
+                <a href="?view={{ view_mode }}&page={{ p }}{% if status_filter != 'all' %}&status={{ status_filter }}{% endif %}{% if priority_filter != 'all' %}&priority={{ priority_filter }}{% endif %}">{{ p }}</a>
+            {% endif %}
+        {% endfor %}
+        
+        {% if page < total_pages %}
+            <a href="?view={{ view_mode }}&page={{ page|add:"1" }}{% if status_filter != 'all' %}&status={{ status_filter }}{% endif %}{% if priority_filter != 'all' %}&priority={{ priority_filter }}{% endif %}">Next ›</a>
+            <a href="?view={{ view_mode }}&page={{ total_pages }}{% if status_filter != 'all' %}&status={{ status_filter }}{% endif %}{% if priority_filter != 'all' %}&priority={{ priority_filter }}{% endif %}">Last »</a>
+        {% else %}
+            <span class="disabled">Next ›</span>
+            <span class="disabled">Last »</span>
+        {% endif %}
+    </div>
+    {% endif %}
 </div>
 
 <script>
@@ -707,5 +846,36 @@ function toggleRecurringOptions() {
         }
     }
 }
+
+// Bulk actions for trash view
+function updateBulkActions() {
+    const checkboxes = document.querySelectorAll('.todo-checkbox:checked');
+    const bulkActions = document.getElementById('bulkActions');
+    const selectedCount = document.getElementById('selectedCount');
+    const bulkRestoreIds = document.getElementById('bulkRestoreIds');
+    const bulkDeleteIds = document.getElementById('bulkDeleteIds');
+    
+    if (bulkActions && selectedCount) {
+        const count = checkboxes.length;
+        selectedCount.textContent = count + ' selected';
+        
+        if (count > 0) {
+            bulkActions.classList.add('show');
+            
+            // Collect selected IDs
+            const ids = Array.from(checkboxes).map(cb => cb.value);
+            
+            if (bulkRestoreIds) bulkRestoreIds.value = ids.join(',');
+            if (bulkDeleteIds) bulkDeleteIds.value = ids.join(',');
+        } else {
+            bulkActions.classList.remove('show');
+        }
+    }
+}
+
+// Initialize bulk actions on page load
+document.addEventListener('DOMContentLoaded', function() {
+    updateBulkActions();
+});
 </script>
 {% endblock %}

@@ -527,3 +527,12 @@ def format_date(date, format_string, lang=None, tz='UTC'):
 @register.filter
 def remove_tag(list_obj, item):
     return [x for x in list_obj if x != item]
+
+
+@register.filter
+def add(value, arg):
+    """Adds the arg to the value."""
+    try:
+        return int(value) + int(arg)
+    except (ValueError, TypeError):
+        return value

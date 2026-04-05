@@ -3,6 +3,7 @@ from django.db import DataError, models
 from django.forms import ValidationError
 from django.views.decorators.csrf import csrf_exempt
 from django.shortcuts import get_object_or_404, render, redirect
+from django.urls import reverse
 from django.http import HttpResponseBadRequest
 from django.utils import timezone
 from django.utils.text import slugify
@@ -810,6 +811,10 @@ def todo_list(request, id):
     priority_filter = request.GET.get('priority', 'all')
     view_mode = request.GET.get('view', 'active')  # 'active' or 'trash'
     
+    # 分页参数
+    items_per_page = 20
+    page = int(request.GET.get('page', 1))
+    
     # 基础查询集
     todos = Todo.objects.filter(blog=blog)
     
@@ -852,6 +857,35 @@ def todo_list(request, id):
     from datetime import timezone as dt_timezone
     todos = sorted(todos, key=lambda t: (priority_order.get(t.priority, 2), t.due_date or timezone.datetime.max.replace(tzinfo=dt_timezone.utc)))
     
+    # 分页
+    total_items = len(todos)
+    total_pages = max(1, (total_items + items_per_page - 1) // items_per_page)
+    page = max(1, min(page, total_pages))
+    start_idx = (page - 1) * items_per_page
+    end_idx = start_idx + items_per_page
+    paginated_todos = todos[start_idx:end_idx]
+    
+    # 生成分页范围
+    max_visible = 7
+    if total_pages <= max_visible:
+        paginator_range = list(range(1, total_pages + 1))
+    else:
+        paginator_range = []
+        if page <= 4:
+            paginator_range = list(range(1, 6))
+            paginator_range.append('...')
+            paginator_range.append(total_pages)
+        elif page >= total_pages - 3:
+            paginator_range = [1]
+            paginator_range.append('...')
+            paginator_range.extend(range(total_pages - 4, total_pages + 1))
+        else:
+            paginator_range = [1]
+            paginator_range.append('...')
+            paginator_range.extend(range(page - 1, page + 2))
+            paginator_range.append('...')
+            paginator_range.append(total_pages)
+    
     # 统计信息
     stats = {
         'total': Todo.objects.filter(blog=blog).exclude(status__in=['completed', 'cancelled']).count(),
@@ -868,11 +902,16 @@ def todo_list(request, id):
     
     return render(request, 'studio/todo_list.html', {
         'blog': blog,
-        'todos': todos,
+        'todos': paginated_todos,
         'stats': stats,
         'status_filter': status_filter,
         'priority_filter': priority_filter,
         'view_mode': view_mode,
+        'page': page,
+        'total_pages': total_pages,
+        'total_items': total_items,
+        'items_per_page': items_per_page,
+        'paginator_range': paginator_range,
     })
 
 
@@ -949,10 +988,35 @@ def todo_update(request, id, pk):
     else:
         blog = get_object_or_404(Blog, user=request.user, subdomain=id)
     
-    todo = get_object_or_404(Todo, pk=pk, blog=blog)
-    
     if request.method == 'POST':
         action = request.POST.get('action', '')
+        
+        # 处理批量操作
+        if action in ['bulk_restore', 'bulk_delete', 'bulk_permanent_delete']:
+            selected_ids = request.POST.getlist('selected_todos')
+            if selected_ids:
+                todos = Todo.objects.filter(pk__in=selected_ids, blog=blog)
+                count = todos.count()
+                
+                if action == 'bulk_restore':
+                    for todo in todos:
+                        todo.status = 'pending'
+                        todo.completed_date = None
+                        todo.save()
+                    print(f"✅ Restored {count} todos from trash")
+                elif action == 'bulk_delete':
+                    for todo in todos:
+                        todo.status = 'cancelled'
+                        todo.save()
+                    print(f"🗑️ Moved {count} todos to trash")
+                elif action == 'bulk_permanent_delete':
+                    todos.delete()
+                    print(f"⚠️ Permanently deleted {count} todos")
+            
+            return redirect(f"{reverse('todo_list', args=[blog.subdomain])}?view=trash")
+        
+        # 单个操作
+        todo = get_object_or_404(Todo, pk=pk, blog=blog)
         
         if action == 'complete':
             todo.complete()
