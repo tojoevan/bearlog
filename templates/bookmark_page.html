@@ -37,6 +37,16 @@
 
 {% block content %}
 
+<style>
+.bookmark-list a {
+    color: #444;
+    text-decoration: underline;
+}
+.bookmark-list a:hover {
+    color: #666;
+}
+</style>
+
 {% if bookmarks %}
 <div class="bookmark-list">
     {% for bookmark in bookmarks %}{% if not forloop.first %} / {% endif %}<a href="{{ bookmark.url }}" target="_blank" rel="noopener noreferrer">{{ bookmark.title|safe_title }}</a>{% empty %}<span>暂无书签</span>{% endfor %}
