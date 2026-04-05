@@ -171,6 +171,7 @@ urlpatterns = [
 
     # Blog pages (need to be before slug route)
     path('bookmark/', blog.bookmark_page, name='bookmark_page'),
+    path('bookmark/<int:pk>/click/', blog.bookmark_click, name='bookmark_click'),
 
     # Generic path endpoint for slugs
     path('<path:slug>/', blog.post, name='post'),

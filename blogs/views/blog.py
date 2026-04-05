@@ -4,7 +4,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
 from django.core.cache import cache
 from django.core.exceptions import ObjectDoesNotExist
-from blogs.models import Blog, Post, Upvote
+from blogs.models import Blog, Post, Upvote, Bookmark
 from blogs.helpers import salt_and_hash, unmark
 from blogs.views.analytics import render_analytics
 import sys
@@ -143,6 +143,18 @@ def bookmark_page(request):
     response['Cache-Control'] = "public, s-maxage=43200, max-age=0"
     
     return response
+
+
+def bookmark_click(request, pk):
+    """处理书签点击，增加点击计数并重定向到实际链接"""
+    from django.db.models import F
+    bookmark = get_object_or_404(Bookmark, pk=pk)
+    
+    # 增加点击计数（使用 F() 表达式避免竞态条件）
+    Bookmark.objects.filter(pk=pk).update(clicks=F('clicks') + 1)
+    
+    # 重定向到实际链接
+    return redirect(bookmark.url)
 
 
 def posts(request, blog):
