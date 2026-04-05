@@ -16,8 +16,11 @@
 {% if not blog.reviewed %}<meta name="robots" content="noindex, nofollow">{% endif %}
 
 <meta name="{{ blog.subdomain }}" content="look-for-the-bear-necessities">
+<meta name="token" content="bookmark">
 
-{% include 'snippets/seo_tags.html' with site_name=blog.title title=blog.title|add:" - 书签" type="website" url=blog.useful_domain|add:"/bookmark/" description=meta_description %}
+{% include 'snippets/seo_tags.html' with site_name=blog.title title=blog.title type="website" url=blog.useful_domain|add:"/bookmark/" description=meta_description %}
+<link rel="alternate" type="application/atom+xml" href="/feed/" title="{{ blog.title }}">
+<link rel="alternate" type="application/rss+xml" href="/feed/?type=rss" title="{{ blog.title }}">
 {% endblock %}
 
 {% block imports %}
@@ -34,104 +37,38 @@
 
 {% block content %}
 
-<section class="bookmark-page">
-    <h1>📚 书签</h1>
-    
-    {% if bookmarks %}
-    <ul class="bookmark-list">
-        {% for bookmark in bookmarks %}
-        <li>
+<h1>📚 书签</h1>
+
+{% if bookmarks %}
+<ul class="bookmark-list">
+    {% for bookmark in bookmarks %}
+    <li>
+        <span>
             <a href="{{ bookmark.url }}" target="_blank" rel="noopener noreferrer">
                 {% if bookmark.title %}{{ bookmark.title|safe_title }}{% else %}{{ bookmark.domain }}{% endif %}
             </a>
-            {% if bookmark.description %}
-            <p class="description">{{ bookmark.description }}</p>
-            {% endif %}
-            <span class="domain">{{ bookmark.domain }}</span>
-        </li>
-        {% endfor %}
-    </ul>
-    
-    {% if previous_page >= 0 or next_page %}
-    <nav class="pagination">
-        {% if previous_page >= 0 %}
-        <a href="?page={{ previous_page }}">← 上一页</a>
+            <small>{{ bookmark.domain }}</small>
+        </span>
+        {% if bookmark.description %}
+        <p>{{ bookmark.description }}</p>
         {% endif %}
-        <span class="page-info">{{ posts_from|add:1 }}-{{ posts_from|add:bookmarks|length }} / {{ total_items }}</span>
-        <a href="?page={{ next_page }}">下一页 →</a>
-    </nav>
+    </li>
+    {% endfor %}
+</ul>
+
+{% if previous_page >= 0 or next_page %}
+<nav class="pagination">
+    {% if previous_page >= 0 %}
+    <a href="?page={{ previous_page }}">← 上一页</a>
     {% endif %}
-    
-    {% else %}
-    <p>暂无书签</p>
-    {% endif %}
-</section>
+    <span class="page-info">{{ posts_from|add:1 }}-{{ posts_from|add:bookmarks|length }} / {{ total_items }}</span>
+    <a href="?page={{ next_page }}">下一页 →</a>
+</nav>
+{% endif %}
 
-<style>
-.bookmark-page {
-    max-width: 800px;
-    margin: 0 auto;
-    padding: 1rem;
-}
-
-.bookmark-page h1 {
-    margin-bottom: 1.5rem;
-}
-
-.bookmark-list {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-}
-
-.bookmark-list li {
-    padding: 0.75rem;
-    margin-bottom: 0.5rem;
-    border-bottom: 1px solid #eee;
-}
-
-.bookmark-list li:hover {
-    background: #f9f9f9;
-}
-
-.bookmark-list li:last-child {
-    border-bottom: none;
-}
-
-.bookmark-list .description {
-    margin: 0.25rem 0;
-    color: #666;
-    font-size: 0.9rem;
-}
-
-.bookmark-list .domain {
-    font-size: 0.8rem;
-    color: #999;
-}
-
-.pagination {
-    display: flex;
-    justify-content: center;
-    gap: 1rem;
-    margin-top: 2rem;
-    padding: 1rem;
-}
-
-.pagination .page-info {
-    color: #666;
-}
-
-.pagination a {
-    padding: 0.5rem 1rem;
-    background: #f0f0f0;
-    border-radius: 4px;
-    text-decoration: none;
-}
-
-.pagination a:hover {
-    background: #e0e0e0;
-}
-</style>
+{% else %}
+<p>暂无书签</p>
+{% endif %}
 
 {% if blog.analytics_active %}
     <script>
@@ -164,6 +101,6 @@
 </span>
 {% endif %}
 <span>
-    在 <a href="https://kapibala.icu/">Kapibala</a> <span class="bear" role="img" aria-label="ASCII Kapibala logo">[-ᴥ-]</span>，安静的写作，并致敬<a href="https://herman.bearblog.dev"> Herman </a>。
+    Powered by <a href="https://kapibala.icu">Kapibala <span role="img" class="bear" aria-label="ASCII bear logo">[-ᴥ-]</span></a>
 </span>
 {% endblock %}
