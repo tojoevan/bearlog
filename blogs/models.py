@@ -649,3 +649,53 @@ class Todo(models.Model):
     def __str__(self):
         status_icon = {'pending': '⏳', 'in_progress': '🔄', 'completed': '✅', 'cancelled': '❌'}.get(self.status, '')
         return f"{status_icon} {self.title} ({self.blog.subdomain})"
+
+
+class Bookmark(models.Model):
+    """书签模型 - 用于收藏网址链接"""
+    blog = models.ForeignKey(Blog, on_delete=models.CASCADE, related_name='bookmarks')
+    title = models.CharField(max_length=200, verbose_name='标题')
+    url = models.URLField(max_length=500, verbose_name='链接')
+    description = models.TextField(blank=True, default='', verbose_name='描述/备注')
+    
+    # 隐私设置
+    is_public = models.BooleanField(default=True, db_index=True, verbose_name='公开可见')
+    
+    # 标签和分类
+    tags = models.TextField(default='[]', blank=True, verbose_name='标签')
+    
+    # 统计
+    clicks = models.IntegerField(default=0, db_index=True, verbose_name='点击次数')
+    
+    # 时间
+    created_date = models.DateTimeField(auto_now_add=True, db_index=True)
+    last_modified = models.DateTimeField(auto_now=True)
+    
+    # 排序
+    order = models.IntegerField(default=0, db_index=True, verbose_name='排序')
+    
+    class Meta:
+        ordering = ['-order', '-created_date']
+        indexes = [
+            models.Index(fields=['blog', 'is_public'], name='bookmark_blog_public'),
+            models.Index(fields=['is_public', 'created_date'], name='bookmark_public_date'),
+        ]
+    
+    @property
+    def tag_list(self):
+        import json
+        return json.loads(self.tags) if self.tags else []
+    
+    @property
+    def domain(self):
+        """提取URL的域名"""
+        from urllib.parse import urlparse
+        try:
+            parsed = urlparse(self.url)
+            return parsed.netloc
+        except:
+            return self.url
+    
+    def __str__(self):
+        icon = '🔗' if self.is_public else '🔒'
+        return f"{icon} {self.title} ({self.blog.subdomain})"

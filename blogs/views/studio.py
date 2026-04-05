@@ -19,7 +19,7 @@ import string
 from blogs.backup import backup_in_thread
 from blogs.forms import AdvancedSettingsForm, BlogForm, DashboardCustomisationForm, PostTemplateForm
 from blogs.helpers import check_connection, is_protected, salt_and_hash
-from blogs.models import Blog, Post, Upvote, Todo
+from blogs.models import Blog, Post, Upvote, Todo, Bookmark
 from blogs.subscriptions import get_subscriptions, normalize_plan_type
 
 
@@ -1105,3 +1105,182 @@ def todo_update(request, id, pk):
         return redirect('todo_list', id=blog.subdomain)
     
     return redirect('todo_list', id=blog.subdomain)
+
+
+@login_required
+def bookmark_list(request, id):
+    """书签列表页面"""
+    if request.user.is_superuser:
+        blog = get_object_or_404(Blog, subdomain=id)
+    else:
+        blog = get_object_or_404(Blog, user=request.user, subdomain=id)
+    
+    # 获取过滤参数
+    visibility_filter = request.GET.get('visibility', 'all')
+    
+    # 分页参数
+    items_per_page = 30
+    page = int(request.GET.get('page', 1))
+    
+    # 基础查询集
+    bookmarks = Bookmark.objects.filter(blog=blog)
+    
+    # 应用过滤器
+    if visibility_filter == 'public':
+        bookmarks = bookmarks.filter(is_public=True)
+    elif visibility_filter == 'private':
+        bookmarks = bookmarks.filter(is_public=False)
+    
+    # 排序
+    bookmarks = bookmarks.order_by('-order', '-created_date')
+    
+    # 分页
+    total_items = bookmarks.count()
+    total_pages = max(1, (total_items + items_per_page - 1) // items_per_page)
+    page = max(1, min(page, total_pages))
+    start_idx = (page - 1) * items_per_page
+    end_idx = start_idx + items_per_page
+    paginated_bookmarks = bookmarks[start_idx:end_idx]
+    
+    # 生成分页范围
+    max_visible = 7
+    if total_pages <= max_visible:
+        paginator_range = list(range(1, total_pages + 1))
+    else:
+        paginator_range = []
+        if page <= 4:
+            paginator_range = list(range(1, 6))
+            paginator_range.append('...')
+            paginator_range.append(total_pages)
+        elif page >= total_pages - 3:
+            paginator_range = [1]
+            paginator_range.append('...')
+            paginator_range.extend(range(total_pages - 4, total_pages + 1))
+        else:
+            paginator_range = [1]
+            paginator_range.append('...')
+            paginator_range.extend(range(page - 1, page + 2))
+            paginator_range.append('...')
+            paginator_range.append(total_pages)
+    
+    # 统计信息
+    stats = {
+        'total': Bookmark.objects.filter(blog=blog).count(),
+        'public': Bookmark.objects.filter(blog=blog, is_public=True).count(),
+        'private': Bookmark.objects.filter(blog=blog, is_public=False).count(),
+    }
+    
+    return render(request, 'studio/bookmark_list.html', {
+        'blog': blog,
+        'bookmarks': paginated_bookmarks,
+        'stats': stats,
+        'visibility_filter': visibility_filter,
+        'page': page,
+        'total_pages': total_pages,
+        'total_items': total_items,
+        'items_per_page': items_per_page,
+        'paginator_range': paginator_range,
+    })
+
+
+@login_required
+def bookmark_create(request, id):
+    """创建书签"""
+    if request.user.is_superuser:
+        blog = get_object_or_404(Blog, subdomain=id)
+    else:
+        blog = get_object_or_404(Blog, user=request.user, subdomain=id)
+    
+    if request.method == 'POST':
+        title = request.POST.get('title', '').strip()
+        url = request.POST.get('url', '').strip()
+        description = request.POST.get('description', '').strip()
+        is_public = request.POST.get('is_public') == 'on'
+        tags = request.POST.get('tags', '').strip()
+        
+        if not title or not url:
+            return redirect('bookmark_list', id=blog.subdomain)
+        
+        # 验证URL格式
+        try:
+            validator = URLValidator()
+            validator(url)
+        except ValidationError:
+            return redirect('bookmark_list', id=blog.subdomain)
+        
+        # 处理标签
+        import json
+        tag_list = [tag.strip() for tag in tags.split(',') if tag.strip()] if tags else []
+        
+        # 获取最大排序值
+        max_order = Bookmark.objects.filter(blog=blog).aggregate(models.Max('order'))['order__max'] or 0
+        
+        # 创建书签
+        bookmark = Bookmark.objects.create(
+            blog=blog,
+            title=title,
+            url=url,
+            description=description,
+            is_public=is_public,
+            tags=json.dumps(tag_list),
+            order=max_order + 1,
+        )
+        
+        return redirect('bookmark_list', id=blog.subdomain)
+    
+    return redirect('bookmark_list', id=blog.subdomain)
+
+
+@login_required
+def bookmark_update(request, id, pk):
+    """更新书签"""
+    if request.user.is_superuser:
+        blog = get_object_or_404(Blog, subdomain=id)
+    else:
+        blog = get_object_or_404(Blog, user=request.user, subdomain=id)
+    
+    if request.method == 'POST':
+        action = request.POST.get('action', '')
+        
+        # 删除操作
+        if action == 'delete':
+            bookmark = get_object_or_404(Bookmark, pk=pk, blog=blog)
+            bookmark.delete()
+            return redirect('bookmark_list', id=blog.subdomain)
+        
+        # 更新操作
+        bookmark = get_object_or_404(Bookmark, pk=pk, blog=blog)
+        
+        if action == 'update':
+            bookmark.title = request.POST.get('title', bookmark.title).strip()
+            bookmark.url = request.POST.get('url', bookmark.url).strip()
+            bookmark.description = request.POST.get('description', bookmark.description).strip()
+            bookmark.is_public = request.POST.get('is_public') == 'on'
+            
+            # 验证URL
+            if bookmark.url:
+                try:
+                    validator = URLValidator()
+                    validator(bookmark.url)
+                except ValidationError:
+                    bookmark.url = 'https://' + bookmark.url
+            
+            # 更新标签
+            tags_str = request.POST.get('tags', '')
+            import json
+            tag_list = [tag.strip() for tag in tags_str.split(',') if tag.strip()] if tags_str else []
+            bookmark.tags = json.dumps(tag_list)
+            
+            # 更新排序
+            order_str = request.POST.get('order', '')
+            if order_str:
+                try:
+                    bookmark.order = int(order_str)
+                except ValueError:
+                    pass
+            
+            bookmark.save()
+        
+        return redirect('bookmark_list', id=blog.subdomain)
+    
+    return redirect('bookmark_list', id=blog.subdomain)

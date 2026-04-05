@@ -1,0 +1,135 @@
+{% extends 'base.html' %}
+
+{% block title %}{% if hot %}热门书签{% else %}{% if newest %}最新书签{% else %}书签发现{% endif %}{% endif %} | Kapibala Blog{% endblock %}
+
+{% block seo %}
+<meta name="robots" content="nofollow">
+{% include 'snippets/seo_tags.html' with site_name='[-ᴥ-] Kapibala Blog' type="website" title='书签发现' url='https://kapibala.icu/discover/bookmarks/' description='发现精彩书签收藏' image="https://bear-images.sfo2.cdn.digitaloceanspaces.com/herman-1683556668-0.png" %}
+<link rel="alternate" type="application/atom+xml" href="/feed/{% if newest %}?newest=True{% endif %}" title="{% if newest %}最新{% else %}热门{% endif %} | Kapibala Bookmarks">
+{% endblock %}
+
+{% block nav %}
+{% endblock %}
+
+{% block page_type %}discover{% endblock %}
+
+{% block content %}
+
+<h1>
+    {% if hot %}
+    🔥 热门书签
+    {% else %}
+    {% if newest %}
+    🆕 最新书签
+    {% else %}
+    📚 书签发现
+    {% endif %}
+    {% endif %}
+</h1>
+
+<nav>
+    <a href="/discover/bookmarks/">发现</a>
+    <b><a href="/discover/bookmarks/hot/">🔥 热榜</a></b>
+    <b><a href="/discover/bookmarks/?newest=true">🆕 最新</a></b>
+    <a href="/">热文</a>
+    <a href="/discover/search/">搜索</a>
+    <a href="/accounts/login/">登录</a>
+</nav>
+
+<p>
+    <details style="font-size: small; color: grey;">
+        <summary>
+            隐藏博客: {{ hide_list|length }}
+        </summary>
+        <hr>
+        Hidden blogs:
+        <br>
+        <textarea id="hidden-blogs" style="width: calc(100% - 20px); height: 100px; padding: 10px;">{% for blog in hide_list %}{{ blog.subdomain }}
+{% endfor %}</textarea>
+        <br>
+        
+        <button onclick="document.cookie='hide_list=' + document.getElementById('hidden-blogs').value.split('\n').join(',') + '; path=/discover/; expires=Fri, 31 Dec 9999 23:59:59 GMT'; location.reload();">Save</button>
+        <br>
+        从发现列表中隐藏博客。
+    </details>
+</p>
+
+{% if bookmarks %}
+<ul class="discover-posts">
+    {% for bookmark in bookmarks %}
+    <li>
+        <span>
+            #{{ forloop.counter|add:posts_from }}
+        </span>
+        <div>
+            <a href="{{ bookmark.url }}" target="_blank" rel="noopener">
+                {{ bookmark.title }}
+            </a>
+            <small>
+                <span>(<a href="{{ bookmark.blog.dynamic_useful_domain }}">{{ bookmark.blog.useful_domain }}</a>)</span>
+                <br>
+                <small title="{{ bookmark.created_date|date:'Y-m-d\TH:i\Z' }}">收藏于 {{ bookmark.created_date|timesince }}前</small>
+                <small>
+                    <svg style="height:16px;margin: 0 -8px -4px 0;" viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" class="css-i6dzq1"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+                    {{ bookmark.clicks }}
+                </small>
+                {% if bookmark.tag_list %}
+                <small>
+                    {% for tag in bookmark.tag_list|slice:":3" %}
+                    <span style="background-color: #f0f0f0; padding: 2px 4px; border-radius: 4px; margin-right: 4px;">
+                        #{{ tag }}
+                    </span>
+                    {% endfor %}
+                </small>
+                {% endif %}
+                {% if bookmark.description %}
+                <br>
+                <span style="color: #666;">{{ bookmark.description|truncatechars:100 }}</span>
+                {% endif %}
+                {% if request.user.is_staff %}
+                    <details>
+                        <summary style="font-size: 0.7rem;">Admin</summary>
+                        <form method="POST" style="display:inline">
+                            <input hidden name="subdomain" value="{{ bookmark.blog.subdomain }}">
+                            <button onclick="event.preventDefault();if(confirm('Hide this blog from bookmarks?')){event.target.parentElement.submit()}">Hide blog</button>
+                        </form>
+                    </details>
+                {% endif %}
+            </small>
+        </div>
+    </li>
+    {% empty %}
+    <li>
+        暂无书签 ʕノ•ᴥ•ʔノ ︵ ┻━┻
+    </li>
+    {% endfor %}
+</ul>
+{% else %}
+<div style="text-align: center; padding: 60px 20px; color: #999;">
+    <h2 style="font-size: 48px; margin: 0 0 20px 0;">📚</h2>
+    <p>还没有公开书签</p>
+    <p>快去收藏一些有意思的网址吧！</p>
+</div>
+{% endif %}
+
+<p>
+    {% if previous_page >= 0 %}
+    <a href="?page={{ previous_page }}{% if newest %}&newest=true{% endif %}">&laquo; 前</a> |
+    {% endif %}
+    {% if bookmarks %}
+    <a href="?page={{ next_page }}{% if newest %}&newest=true{% endif %}">后 &raquo;</a>
+    {% endif %}
+</p>
+<p>
+    <i>
+        共 {{ total_items }} 个书签
+    </i>
+</p>
+{% endblock %}
+
+{% block footer %}
+
+<p>
+    在 <a href="https://kapibala.icu/">Kapibala</a> <span class="bear" role="img" aria-label="ASCII Kapibala logo">[-ᴥ-]</span>，安静的写作，并致敬<a href="https://herman.bearblog.dev"> Herman </a>。
+</p>
+{% endblock %}

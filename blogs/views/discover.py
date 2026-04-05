@@ -7,7 +7,7 @@ from django.db.models.functions import Length
 from django.contrib.postgres.search import SearchQuery
 import tldextract
 
-from blogs.models import Post, Blog
+from blogs.models import Post, Blog, Bookmark
 from blogs.helpers import clean_text, random_post_link, random_blog_link
 from blogs.templatetags.custom_tags import markdown, plain_title
 
@@ -295,3 +295,122 @@ def random_blog(request):
     if not url:
         return redirect('/discover/')
     return redirect(url)
+
+
+def bookmarks(request):
+    """公开书签列表页面"""
+    # 处理POST请求（隐藏博客）
+    if request.method == 'POST':
+        subdomain = request.POST.get('subdomain')
+        action = request.POST.get('action')
+
+        if subdomain and request.user.is_authenticated:
+            hide_list = request.user.settings.discovery_hide_list or []
+            
+            if action == 'hide' and subdomain not in hide_list:
+                hide_list.append(subdomain)
+            elif action == 'unhide' and subdomain in hide_list:
+                hide_list.remove(subdomain)
+            
+            request.user.settings.discovery_hide_list = hide_list
+            request.user.settings.save()
+            
+            return redirect(request.get_full_path())
+
+    try:
+        page = int(request.GET.get("page", 0) or 0)
+    except ValueError:
+        page = 0
+
+    items_per_page = 30
+    posts_from = page * items_per_page
+    posts_to = (page * items_per_page) + items_per_page
+
+    newest = request.GET.get("newest")
+
+    # 基础查询 - 只获取公开书签
+    base_query = Bookmark.objects.filter(is_public=True).select_related('blog')
+    
+    # 获取隐藏博客列表
+    hide_list = None
+    if request.user.is_authenticated:
+        hide_list_subdomains = request.user.settings.discovery_hide_list or []
+        hide_list = Blog.objects.filter(subdomain__in=hide_list_subdomains)
+        if hide_list:
+            base_query = base_query.exclude(blog__in=hide_list)
+
+    if newest:
+        bookmarks_list = base_query.order_by("-created_date")
+    else:
+        bookmarks_list = base_query.order_by("-clicks", "-created_date")
+
+    total_items = bookmarks_list.count()
+    bookmarks_list = bookmarks_list[posts_from:posts_to]
+
+    return render(request, "bookmarks.html", {
+        "bookmarks": bookmarks_list,
+        "previous_page": page - 1,
+        "next_page": page + 1,
+        "posts_from": posts_from,
+        "newest": newest,
+        "hide_list": hide_list,
+        "total_items": total_items,
+    })
+
+
+def bookmarks_hot(request):
+    """热门书签热榜页面 - 按点击量排序"""
+    # 处理POST请求（隐藏博客）
+    if request.method == 'POST':
+        subdomain = request.POST.get('subdomain')
+        action = request.POST.get('action')
+
+        if subdomain and request.user.is_authenticated:
+            hide_list = request.user.settings.discovery_hide_list or []
+            
+            if action == 'hide' and subdomain not in hide_list:
+                hide_list.append(subdomain)
+            elif action == 'unhide' and subdomain in hide_list:
+                hide_list.remove(subdomain)
+            
+            request.user.settings.discovery_hide_list = hide_list
+            request.user.settings.save()
+            
+            return redirect(request.get_full_path())
+
+    try:
+        page = int(request.GET.get("page", 0) or 0)
+    except ValueError:
+        page = 0
+
+    items_per_page = 30
+    posts_from = page * items_per_page
+    posts_to = (page * items_per_page) + items_per_page
+
+    # 基础查询 - 只获取公开书签
+    base_query = Bookmark.objects.filter(is_public=True, clicks__gt=0).select_related('blog')
+    
+    # 获取隐藏博客列表
+    hide_list = None
+    if request.user.is_authenticated:
+        hide_list_subdomains = request.user.settings.discovery_hide_list or []
+        hide_list = Blog.objects.filter(subdomain__in=hide_list_subdomains)
+        if hide_list:
+            base_query = base_query.exclude(blog__in=hide_list)
+
+    # 按点击量排序
+    bookmarks_list = base_query.order_by("-clicks", "-created_date")
+
+    total_items = bookmarks_list.count()
+    bookmarks_list = bookmarks_list[posts_from:posts_to]
+
+    return render(request, "bookmarks.html", {
+        "bookmarks": bookmarks_list,
+        "previous_page": page - 1,
+        "next_page": page + 1,
+        "posts_from": posts_from,
+        "newest": False,
+        "hot": True,
+        "hide_list": hide_list,
+        "total_items": total_items,
+    })

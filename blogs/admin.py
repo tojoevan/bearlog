@@ -6,7 +6,7 @@ from django.utils.html import escape, format_html, format_html_join
 from django.urls import reverse
 from django.utils.safestring import mark_safe
 
-from blogs.models import Blog, PersistentStore, Post, Stylesheet, Upvote, Hit, Subscriber, UserSettings, Media, Todo
+from blogs.models import Blog, PersistentStore, Post, Stylesheet, Upvote, Hit, Subscriber, UserSettings, Media, Todo, Bookmark
 
 
 admin.autodiscover()
@@ -259,6 +259,19 @@ class TodoAdmin(admin.ModelAdmin):
     list_display = ('title', 'blog', 'status', 'priority', 'due_date', 'created_date', 'is_recurring')
     list_filter = ('status', 'priority', 'is_recurring', 'recurring_type', 'created_date')
     search_fields = ('title', 'description', 'blog__title', 'blog__subdomain')
+    ordering = ('-created_date',)
+    date_hierarchy = 'created_date'
+    
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related('blog')
+
+
+@admin.register(Bookmark)
+class BookmarkAdmin(admin.ModelAdmin):
+    raw_id_fields = ('blog',)
+    list_display = ('title', 'blog', 'is_public', 'clicks', 'created_date')
+    list_filter = ('is_public', 'created_date')
+    search_fields = ('title', 'url', 'description', 'blog__title', 'blog__subdomain')
     ordering = ('-created_date',)
     date_hierarchy = 'created_date'
     

@@ -99,6 +99,11 @@ urlpatterns = [
     path('<id>/dashboard/todo/create/', main_site_only(studio.todo_create), name='todo_create'),
     path('<id>/dashboard/todo/<int:pk>/update/', main_site_only(studio.todo_update), name='todo_update'),
 
+    # Bookmark
+    path('<id>/dashboard/bookmark/', main_site_only(studio.bookmark_list), name='bookmark_list'),
+    path('<id>/dashboard/bookmark/create/', main_site_only(studio.bookmark_create), name='bookmark_create'),
+    path('<id>/dashboard/bookmark/<int:pk>/update/', main_site_only(studio.bookmark_update), name='bookmark_update'),
+
     path('<id>/dashboard/opt-in-review/', main_site_only(dashboard.opt_in_review), name='opt_in_review'),
 
     path('<id>/dashboard/posts/', main_site_only(dashboard.posts_edit), name='posts_edit'),
@@ -122,6 +127,10 @@ urlpatterns = [
     path('discover/search/', main_site_only(discover.search), name='search'),
     path('discover/random-post/', main_site_only(discover.random_post), name='random_post'),
     path('discover/random-blog/', main_site_only(discover.random_blog), name='random_blog'),
+
+    # Bookmarks
+    path('discover/bookmarks/', main_site_only(discover.bookmarks), name='bookmarks'),
+    path('discover/bookmarks/hot/', main_site_only(discover.bookmarks_hot), name='bookmarks_hot'),
 
     # Caddy validation
     path('ping/', main_site_only(blog.ping), name='ping'),
