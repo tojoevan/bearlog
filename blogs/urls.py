@@ -25,12 +25,15 @@ def main_site_only(view_func):
         # If MAIN_SITE_HOSTS is empty or host is not in sites, treat as blog subdomain
         if not sites or http_host not in sites:
             print(f"[DEBUG] Host {http_host} not in sites, routing as subdomain blog", file=sys.stderr)
-            # If not the main site, redirect to a potential blog post
-            from blogs.views.blog import home
+            from blogs.views.blog import home, bookmark_page
             # Handle root path - show blog homepage
             if request.path == '/' or request.path == '':
                 print(f"[DEBUG] Routing to home(request)", file=sys.stderr)
                 return home(request)
+            # Handle bookmark page
+            elif request.path == '/bookmark/' or request.path == '/bookmark':
+                print(f"[DEBUG] Routing to bookmark_page(request)", file=sys.stderr)
+                return bookmark_page(request)
             print(f"[DEBUG] Routing to blog.post with slug={request.path}", file=sys.stderr)
             return blog.post(request, slug=request.path)
         return view_func(request, *args, **kwargs)
