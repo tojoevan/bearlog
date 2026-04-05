@@ -97,6 +97,7 @@ INSTALLED_APPS = [
     'allauth.account',
     'allauth.socialaccount',
     'markdownx',
+    'django_extensions',
 ]
 
 # Only include debug_toolbar in DEBUG mode (or when ENABLE_DEBUG_TOOLBAR is explicitly set)
