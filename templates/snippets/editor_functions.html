@@ -61,6 +61,33 @@
 		// Flush draft immediately before navigating away
 		clearTimeout(draftTimer);
 		saveDraft($textarea.value);
+		
+		// Get custom link and tags values
+		const customLink = document.getElementById('custom-link');
+		const customTags = document.getElementById('custom-tags');
+		
+		// Get current header content
+		let headerText = $headerContent.innerText;
+		
+		// Update link if custom link input exists
+		if (customLink && customLink.value) {
+			// Replace or add link in header content
+			const linkRegex = /<b>link:<\/b>\s*.*/;
+			if (linkRegex.test(headerText)) {
+				headerText = headerText.replace(linkRegex, '<b>link:</b> ' + customLink.value);
+			}
+		}
+		
+		// Update tags if custom tags input exists, replace Chinese commas with English commas
+		if (customTags && customTags.value) {
+			const processedTags = customTags.value.replace(/，/g, ',');
+			const tagsRegex = /<b>tags:<\/b>\s*.*/;
+			if (tagsRegex.test(headerText)) {
+				headerText = headerText.replace(tagsRegex, '<b>tags:</b> ' + processedTags);
+			}
+		}
+		
+		$headerContent.innerHTML = headerText;
 		$hiddenHeaderContent.value = $headerContent.innerText;
 		$form.submit();
 	}

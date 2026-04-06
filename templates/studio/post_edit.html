@@ -117,18 +117,20 @@ New post | Bear Blog
     >
         {% if post %}
         <b>title:</b> {{ post.title }}<br>
-        <b>link:</b> {{ post.slug }}{% if post.alias %}<br>
+        <b>link:</b> <input type="text" id="custom-link" value="{{ post.slug }}" style="border:none; background:transparent; width:200px; font-size:14px;">{% if post.alias %}<br>
         <b>alias:</b> {{ post.alias }}{% endif %}<br>
+        <b>tags:</b> <input type="text" id="custom-tags" value="{{ post.tags|join:", " }}" style="border:none; background:transparent; width:300px; font-size:14px;" placeholder="tag1, tag2, tag3"><br>
         <b>published_date:</b> <span id="published-date">{% format_date post.published_date 'Y-m-d H:i' 'en' tz %}</span>{% if post.canonical_url %}<br>
         <b>canonical_url:</b> {{ post.canonical_url }}{% endif %}{% if post.meta_description %}<br>
         <b>meta_description:</b> {{ post.meta_description }}{% endif %}{% if post.meta_image %}<br>
         <b>meta_image:</b> {{ post.meta_image }}{% endif %}{% if post.lang %}<br>
-        <b>lang:</b> {{ post.lang }}{% endif %}{% if post.tags|length > 0 %}<br>
-        <b>tags:</b> {{ post.tags|join:", " }}{% endif %}{% if post.is_page %}<br>
+        <b>lang:</b> {{ post.lang }}{% endif %}{% if post.is_page %}<br>
         <b>is_page:</b> {{ post.is_page|lower }}{% endif %}{% if post.class_name %}<br>
         <b>class_name:</b> {{ post.class_name }}{% endif %}{% if not post.make_discoverable %}<br>
         <b>make_discoverable:</b> {{ post.make_discoverable|lower }}<br>{% endif %}{% elif template_header %}
-        <b>{{ template_header|linebreaksbr }}</b>{% if is_page %}<b>is_page:</b> true{% endif %}{% else %}<b>title:</b> <br>{% if is_page %}<b>is_page:</b> true{% endif %}{% endif %}
+        <b>{{ template_header|linebreaksbr }}</b>{% if is_page %}<b>is_page:</b> true{% endif %}{% else %}<b>title:</b> <br>
+        <b>link:</b> <input type="text" id="custom-link" value="" style="border:none; background:transparent; width:200px; font-size:14px;"><br>
+        <b>tags:</b> <input type="text" id="custom-tags" value="" style="border:none; background:transparent; width:300px; font-size:14px;" placeholder="tag1, tag2, tag3"><br>{% if is_page %}<b>is_page:</b> true{% endif %}{% endif %}
     </div>
 
     <input type="hidden" id="hidden_header_content" name="header_content">
