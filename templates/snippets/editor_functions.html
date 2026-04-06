@@ -66,28 +66,32 @@
 		const customLink = document.getElementById('custom-link');
 		const customTags = document.getElementById('custom-tags');
 		
-		// Get current header content
-		let headerText = $headerContent.innerText;
+		// Get current header content HTML (not innerText to preserve HTML tags)
+		let headerHTML = $headerContent.innerHTML;
 		
-		// Update link if custom link input exists
-		if (customLink && customLink.value) {
-			// Replace or add link in header content
-			const linkRegex = /<b>link:<\/b>\s*.*/;
-			if (linkRegex.test(headerText)) {
-				headerText = headerText.replace(linkRegex, '<b>link:</b> ' + customLink.value);
+		// Update link value in the header HTML if custom link input exists
+		if (customLink) {
+			const linkInputMatch = headerHTML.match(/<input[^>]*id="custom-link"[^>]*>/);
+			if (linkInputMatch) {
+				const oldInput = linkInputMatch[0];
+				const newInput = oldInput.replace(/value="[^"]*"/, 'value="' + customLink.value.replace(/"/g, '&quot;') + '"');
+				headerHTML = headerHTML.replace(oldInput, newInput);
 			}
 		}
 		
-		// Update tags if custom tags input exists, replace Chinese commas with English commas
-		if (customTags && customTags.value) {
+		// Update tags value in the header HTML if custom tags input exists
+		// Replace Chinese commas with English commas
+		if (customTags) {
 			const processedTags = customTags.value.replace(/，/g, ',');
-			const tagsRegex = /<b>tags:<\/b>\s*.*/;
-			if (tagsRegex.test(headerText)) {
-				headerText = headerText.replace(tagsRegex, '<b>tags:</b> ' + processedTags);
+			const tagsInputMatch = headerHTML.match(/<input[^>]*id="custom-tags"[^>]*>/);
+			if (tagsInputMatch) {
+				const oldInput = tagsInputMatch[0];
+				const newInput = oldInput.replace(/value="[^"]*"/, 'value="' + processedTags.replace(/"/g, '&quot;') + '"');
+				headerHTML = headerHTML.replace(oldInput, newInput);
 			}
 		}
 		
-		$headerContent.innerHTML = headerText;
+		$headerContent.innerHTML = headerHTML;
 		$hiddenHeaderContent.value = $headerContent.innerText;
 		$form.submit();
 	}
