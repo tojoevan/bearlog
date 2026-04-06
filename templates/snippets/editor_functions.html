@@ -92,7 +92,15 @@
 		}
 		
 		$headerContent.innerHTML = headerHTML;
-		$hiddenHeaderContent.value = $headerContent.innerText;
+		// Get header text and replace Chinese commas in tags line
+		let headerText = $headerContent.innerText;
+		// Process tags line to replace Chinese commas with English commas
+		headerText = headerText.replace(/tags:\s*(.*)/gi, function(match, tagsContent) {
+			// Replace Chinese commas (，) with English commas (,)
+			const processedTags = tagsContent.replace(/，/g, ',');
+			return 'tags: ' + processedTags;
+		});
+		$hiddenHeaderContent.value = headerText;
 		$form.submit();
 	}
 
