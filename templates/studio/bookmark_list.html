@@ -7,579 +7,222 @@
     {% include 'styles/blog/default.css' %}
     {% include 'styles/dashboard.css' %}
     <style>
-        /* 极简风格：参考blog_list.html的设计 */
         .bookmark-container {
             max-width: var(--width);
             margin: 0 auto;
         }
         
-        /* 统计 - 简洁一句话 */
-        .bookmark-stats-compact {
+        .bookmark-stats {
             margin: 15px 0;
-            font-size: 14px;
-            color: var(--text-color);
-            padding: 8px 0;
-        }
-        
-        /* 快速添加 - 紧凑版 */
-        .quick-add-compact {
-            margin: 15px 0;
-        }
-        
-        .quick-add-form-compact {
-            display: flex;
-            gap: 8px;
-            align-items: center;
-            flex-wrap: wrap;
-        }
-        
-        .quick-add-form-compact input[type="url"],
-        .quick-add-form-compact input[type="text"] {
-            padding: 8px;
-            border: none;
-            background-color: #eceff4;
-            line-height: 1.7;
-            outline: none;
-            color: inherit;
-            font-size: 14px;
-            min-width: 150px;
-        }
-        
-        .quick-add-form-compact input[type="checkbox"] {
-            width: auto;
-        }
-        
-        .quick-add-form-compact label {
-            font-size: 13px;
-            color: var(--text-color);
-        }
-        
-        .quick-add-form-compact button {
-            padding: 6px 12px;
-            background: none;
-            color: var(--link-color);
-            border: 1px solid var(--link-color);
-            border-radius: 3px;
-            cursor: pointer;
-            font-size: 13px;
-            text-decoration: none;
-            transition: all 0.2s;
-        }
-        
-        .quick-add-form-compact button:hover {
-            background: var(--link-color);
-            color: white;
-        }
-        
-        /* 过滤器和搜索 - 简化版 */
-        .bookmark-filters {
-            display: flex;
-            gap: 10px;
-            margin: 20px 0;
-            align-items: center;
-            flex-wrap: wrap;
-        }
-        
-        .bookmark-filters select,
-        .bookmark-filters input[type="text"] {
-            padding: 8px;
-            border: none;
-            background-color: #eceff4;
-            line-height: 1.7;
-            outline: none;
-            color: inherit;
-            font-size: 14px;
-        }
-        
-        .search-form {
-            display: flex;
-            gap: 5px;
-            flex: 1;
-        }
-        
-        .search-form input {
-            flex: 1;
-        }
-        
-        /* 书签列表 - 网格卡片布局 */
-        .bookmark-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            gap: 12px;
-            margin: 20px 0;
-        }
-        
-        .bookmark-card {
-            background: #f9f9f9;
-            border-radius: 6px;
-            padding: 10px;
-            border: 1px solid #eceff4;
-            min-height: 90px; /* 最小高度，更紧凑 */
-            position: relative; /* 为右上角按钮提供定位上下文 */
-            overflow: hidden; /* 恢复为hidden，编辑表单在卡片内部 */
-            transition: all 0.2s;
-            display: flex;
-            flex-direction: column;
-        }
-        
-        /* 当编辑表单显示时，卡片高度自动扩展 */
-        .bookmark-card.has-edit-form-open {
-            overflow: visible;
-        }
-        
-        .bookmark-card:hover {
-            border-color: var(--link-color);
-            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-        }
-        
-        .card-header {
-            flex: 1;
-            overflow: hidden;
-            position: relative;
-        }
-        
-        /* 右上角操作按钮 */
-        .card-actions-top-right {
-            position: absolute;
-            top: 8px; /* 紧贴卡片顶部 */
-            right: 8px;
-            display: flex;
-            gap: 4px;
-            z-index: 10;
-        }
-        
-        .card-actions-top-right button {
-            padding: 3px 6px;
-            border: none;
-            background: rgba(255, 255, 255, 0.9);
-            cursor: pointer;
-            font-size: 11px;
-            color: var(--link-color);
-            border-radius: 2px;
-            opacity: 0.8;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
-            min-width: 24px;
-            min-height: 24px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        
-        .card-actions-top-right button:hover {
-            opacity: 1;
-            background: white;
-        }
-        
-        .card-actions-top-right .btn-delete {
-            color: #f44336 !important;
-        }
-        
-        .card-actions-top-right .btn-delete:hover {
-            color: #d32f2f !important;
-        }
-        
-        .card-title {
-            font-size: 14px;
-            font-weight: 600;
-            margin: 0 0 4px 0;
-            line-height: 1.3;
-            word-break: break-word;
-            display: -webkit-box;
-            -webkit-line-clamp: 2;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
-            padding-right: 40px; /* 为右上角按钮留出空间 */
-        }
-        
-        .card-title a {
-            text-decoration: none;
-            color: var(--heading-color);
-        }
-        
-        .card-title a:hover {
-            text-decoration: underline;
-            color: var(--link-color);
-        }
-        
-        .card-domain {
-            font-size: 11px;
-            color: #777;
-            margin-bottom: 4px;
-            word-break: break-word;
-        }
-        
-        .card-meta {
-            display: flex;
-            gap: 6px;
-            font-size: 10px;
-            color: #777;
-            flex-wrap: wrap;
-            margin-top: 6px;
-        }
-        
-        /* 移除底部区域，已经将按钮移到右上角 */
-        .card-footer {
-            display: none;
-        }
-        
-        /* 简洁的可见性徽章 */
-        .visibility-badge {
-            display: inline-block;
-            padding: 1px 6px;
-            cursor: pointer;
-            font-size: 10px;
-            font-weight: 600;
-        }
-        
-        .visibility-public {
-            color: #2e7d32;
-        }
-        
-        .visibility-private {
-            color: #e65100;
-        }
-        
-        .visibility-badge.loading {
-            opacity: 0.6;
-            pointer-events: none;
-        }
-        
-        /* 标签 - 简化版 */
-        .bookmark-tags {
-            display: flex;
-            gap: 4px;
-            margin-top: 5px;
-            flex-wrap: wrap;
-        }
-        
-        .tag {
-            background: #eceff4;
-            padding: 1px 6px;
-            border-radius: 2px;
-            font-size: 10px;
-            color: #555;
-        }
-        
-        /* 操作按钮 - 简化版 */
-        .bookmark-actions {
-            display: flex;
-            gap: 5px;
-        }
-        
-        .bookmark-actions button {
-            padding: 4px 8px;
-            border: none;
-            background: none;
-            cursor: pointer;
-            font-size: 11px;
-            color: var(--link-color);
-        }
-        
-        .bookmark-actions button:hover {
-            text-decoration: underline;
-        }
-        
-        .btn-delete {
-            color: #f44336 !important;
-        }
-        
-        .btn-delete:hover {
-            color: #d32f2f !important;
-        }
-        
-        /* 紧凑操作按钮 */
-        .bookmark-actions-compact {
-            display: flex;
-            gap: 8px;
-        }
-        
-        .bookmark-actions-compact button {
-            padding: 4px 8px;
-            border: none;
-            background: none;
-            cursor: pointer;
-            font-size: 12px;
-            color: var(--link-color);
-            opacity: 0.7;
-        }
-        
-        .bookmark-actions-compact button:hover {
-            opacity: 1;
-        }
-        
-        .bookmark-actions-compact .btn-delete {
-            color: #f44336 !important;
-        }
-        
-        .bookmark-actions-compact .btn-delete:hover {
-            color: #d32f2f !important;
-        }
-        
-        /* 描述 - 简化版 */
-        .bookmark-description {
-            margin-top: 8px;
-            padding-top: 8px;
-            border-top: 1px dashed #eceff4;
-            font-size: 13px;
-            color: var(--text-color);
-            line-height: 1.5;
-        }
-        
-        /* 表单 - 使用dashboard.css的样式 */
-        .add-bookmark-form {
-            background: #f9f9f9;
-            padding: 15px;
-            margin: 20px 0;
-            border-radius: 4px;
-        }
-        
-        .form-row {
-            margin-bottom: 10px;
-        }
-        
-        .form-row label {
-            display: block;
-            margin-bottom: 3px;
-            font-weight: bold;
-            font-size: 13px;
-        }
-        
-        .form-row input[type="text"],
-        .form-row input[type="url"],
-        .form-row textarea {
-            width: 100%;
-            padding: 8px;
-            border: none;
-            background-color: #eceff4;
-            line-height: 1.7;
-            outline: none;
-            color: inherit;
-            font-size: 14px;
-            box-sizing: border-box;
-        }
-        
-        .form-row textarea {
-            min-height: 60px;
-            resize: vertical;
-        }
-        
-        .checkbox-row {
-            display: flex;
-            align-items: center;
-            gap: 5px;
-        }
-        
-        .form-actions {
-            display: flex;
-            gap: 8px;
-            margin-top: 10px;
-        }
-        
-        .form-actions button {
-            padding: 8px 16px;
-            border: none;
-            cursor: pointer;
-            font-size: 13px;
-        }
-        
-        .btn-primary {
-            padding: 6px 12px;
-            background: none;
-            color: var(--link-color);
-            border: 1px solid var(--link-color);
-            border-radius: 3px;
-            cursor: pointer;
-            font-size: 13px;
-            text-decoration: none;
-            transition: all 0.2s;
-        }
-        
-        .btn-primary:hover {
-            background: var(--link-color);
-            color: white;
-        }
-        
-        /* 搜索按钮特殊样式 */
-        .search-form .btn-primary {
-            padding: 6px 12px;
-            min-width: 36px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        
-        /* 次要按钮样式 */
-        .btn-secondary {
-            padding: 6px 12px;
-            background: none;
-            color: #777;
-            border: 1px solid #ccc;
-            border-radius: 3px;
-            cursor: pointer;
-            font-size: 13px;
-            text-decoration: none;
-            transition: all 0.2s;
-        }
-        
-        .btn-secondary:hover {
-            background: #f5f5f5;
-            border-color: #999;
-            color: #555;
-        }
-        
-        a.btn-secondary {
-            display: inline-block;
-        }
-        
-        /* 快速添加区域 - 简化版 */
-        .quick-add-section {
-            background: #e3f2fd;
-            padding: 12px;
-            margin: 20px 0;
-            border-radius: 4px;
-        }
-        
-        .quick-add-section h4 {
-            margin: 0 0 8px 0;
-            color: #1565c0;
-            font-size: 14px;
+            font-size: small;
+            color: grey;
         }
         
         .quick-add-form {
             display: flex;
             gap: 8px;
+            margin: 15px 0;
             flex-wrap: wrap;
             align-items: center;
         }
         
-        .quick-add-form input[type="url"] {
-            flex: 2;
-            min-width: 200px;
-            padding: 8px;
-            border: 1px solid #64b5f6;
-            background-color: white;
-            border-radius: 4px;
-            font-size: 13px;
-        }
-        
+        .quick-add-form input[type="url"],
         .quick-add-form input[type="text"] {
-            flex: 1;
+            padding: 6px;
+            border: 1px solid #ddd;
+            font-size: small;
             min-width: 120px;
-            padding: 8px;
-            border: 1px solid #64b5f6;
-            background-color: white;
-            border-radius: 4px;
-            font-size: 13px;
         }
         
         .quick-add-form button {
-            padding: 8px 16px;
-            background: #1565c0;
-            color: white;
-            border: none;
-            border-radius: 4px;
+            padding: 6px 12px;
+            background: none;
+            border: 1px solid #ccc;
             cursor: pointer;
-            font-size: 13px;
+            font-size: small;
         }
         
-        .quick-add-form button:hover {
-            opacity: 0.9;
+        .bookmark-filters {
+            display: flex;
+            gap: 10px;
+            margin: 15px 0;
+            align-items: center;
+            flex-wrap: wrap;
+            font-size: small;
+            color: grey;
         }
         
-        .quick-add-hint {
-            font-size: 11px;
-            color: #666;
-            margin-top: 6px;
+        .bookmark-filters select {
+            padding: 4px;
+            border: 1px solid #ddd;
+            font-size: small;
         }
         
-        /* 空状态 - 简化版 */
+        .search-form {
+            display: flex;
+            gap: 5px;
+        }
+        
+        .search-form input {
+            padding: 4px;
+            border: 1px solid #ddd;
+            font-size: small;
+        }
+        
+        .bookmark-list {
+            list-style: none;
+            padding: 0;
+            margin: 20px 0;
+        }
+        
+        .bookmark-item {
+            padding: 12px 0;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            gap: 8px;
+            align-items: baseline;
+        }
+        
+        .bookmark-item:hover {
+            background-color: #fafafa;
+        }
+        
+        .bookmark-item .index-num {
+            color: grey;
+            font-size: small;
+            min-width: 24px;
+        }
+        
+        .bookmark-item .title {
+            font-weight: 500;
+            flex: 1;
+            word-break: break-word;
+        }
+        
+        .bookmark-item .title a {
+            text-decoration: none;
+            color: var(--link-color);
+        }
+        
+        .bookmark-item .title a:hover {
+            text-decoration: underline;
+        }
+        
+        .bookmark-item .meta {
+            font-size: small;
+            color: grey;
+            white-space: nowrap;
+        }
+        
+        .bookmark-item .actions {
+            display: flex;
+            gap: 6px;
+            font-size: small;
+        }
+        
+        .bookmark-item .actions button,
+        .bookmark-item .actions a {
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: grey;
+            text-decoration: none;
+        }
+        
+        .bookmark-item .actions button:hover,
+        .bookmark-item .actions a:hover {
+            color: var(--link-color);
+        }
+        
+        .bookmark-item .actions .delete:hover {
+            color: #c00;
+        }
+        
+        .bookmark-edit-form {
+            margin: 10px 0;
+            padding: 10px;
+            background: #fafafa;
+            border: 1px solid #eee;
+        }
+        
+        .bookmark-edit-form input {
+            padding: 4px;
+            border: 1px solid #ddd;
+            font-size: small;
+            margin-right: 8px;
+        }
+        
+        .bookmark-edit-form button {
+            padding: 4px 8px;
+            background: none;
+            border: 1px solid #ccc;
+            cursor: pointer;
+            font-size: small;
+            margin-right: 4px;
+        }
+        
         .empty-state {
+            padding: 40px 0;
+            color: grey;
             text-align: center;
-            padding: 40px 20px;
-            color: #777;
         }
         
-        .empty-state h3 {
-            margin-bottom: 8px;
-        }
-        
-        /* 分页 - 简化版 */
         .pagination {
             display: flex;
             justify-content: center;
-            align-items: center;
-            gap: 4px;
+            gap: 8px;
             margin: 20px 0;
-            flex-wrap: wrap;
+            font-size: small;
         }
         
-        .pagination a, .pagination span {
-            padding: 6px 10px;
-            border: 1px solid #ddd;
-            border-radius: 2px;
-            text-decoration: none;
-            color: var(--text-color);
-            font-size: 13px;
-        }
-        
-        .pagination a:hover {
-            background: #eceff4;
+        .pagination a {
+            color: var(--link-color);
         }
         
         .pagination .current {
-            background: var(--link-color);
-            color: white;
-            border-color: var(--link-color);
+            color: grey;
         }
         
-        .pagination .disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
+        details.add-bookmark-form {
+            margin: 20px 0;
+            font-size: small;
+            color: grey;
         }
         
-        .pagination-info {
-            text-align: center;
-            color: #777;
-            margin-bottom: 8px;
-            font-size: 13px;
-        }
-        
-        /* 编辑表单 - 简化版 */
-        .bookmark-edit-form {
+        details.add-bookmark-form form {
             margin-top: 10px;
-            padding: 12px;
-            background: #f9f9f9;
-            border-radius: 4px;
+        }
+        
+        details.add-bookmark-form input,
+        details.add-bookmark-form textarea {
+            padding: 6px;
             border: 1px solid #ddd;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-            z-index: 2;
+            font-size: small;
+            width: 100%;
+            box-sizing: border-box;
+            margin-bottom: 8px;
         }
         
-        /* 当编辑表单显示时，卡片高度自动扩展 */
-        .bookmark-card.has-edit-form-open {
-            overflow: visible;
-            z-index: 10;
-            margin-bottom: 10px; /* 为编辑表单留出空间 */
+        details.add-bookmark-form label {
+            font-size: small;
+            color: grey;
         }
         
-        /* 黑暗模式支持 */
+        details.add-bookmark-form button {
+            padding: 6px 12px;
+            background: none;
+            border: 1px solid #ccc;
+            cursor: pointer;
+            font-size: small;
+            margin-right: 8px;
+        }
+        
         @media (prefers-color-scheme: dark) {
-            .stat-card,
-            .add-bookmark-form,
-            .quick-add-section,
+            .bookmark-item:hover {
+                background-color: #1a1a1a;
+            }
             .bookmark-edit-form {
-                background-color: #004052;
-            }
-            
-            .quick-add-form input[type="url"],
-            .quick-add-form input[type="text"] {
-                background-color: #01242e;
-                border-color: #8cc2dd;
-                color: var(--text-color);
-            }
-            
-            .pagination a:hover {
-                background: #004052;
+                background: #1a1a1a;
             }
         }
     </style>
@@ -591,190 +234,114 @@
 <div class="bookmark-container">
     <h1>🔗 Bookmarks</h1>
     
-    <!-- Statistics - Compact one-line description -->
-    <div class="bookmark-stats-compact">
-        📚 <strong>{{ stats.total }}</strong> bookmarks total ({{ stats.public }} public, {{ stats.private }} private)
+    <div class="bookmark-stats">
+        <strong>{{ stats.total }}</strong> bookmarks ({{ stats.public }} public, {{ stats.private }} private)
     </div>
     
-    <!-- Quick Add Section - Compact -->
-    <div class="quick-add-compact">
-        <form method="POST" action="{% url 'bookmark_create' id=blog.subdomain %}" class="quick-add-form-compact" id="quickAddForm">
-            {% csrf_token %}
-            <input type="url" name="url" id="quick-url" placeholder="URL..." required>
-            <input type="text" name="title" id="quick-title" placeholder="Title">
-            <input type="checkbox" name="is_public" checked id="quick-public">
-            <label for="quick-public">Public</label>
-            <button type="submit" id="quick-submit">➕ Add</button>
-        </form>
-    </div>
+    <form method="POST" action="{% url 'bookmark_create' id=blog.subdomain %}" class="quick-add-form" id="quickAddForm">
+        {% csrf_token %}
+        <input type="url" name="url" id="quick-url" placeholder="URL" required>
+        <input type="text" name="title" id="quick-title" placeholder="Title">
+        <label style="font-size: small; color: grey;">
+            <input type="checkbox" name="is_public" checked> Public
+        </label>
+        <button type="submit">Add</button>
+    </form>
     
-    <!-- Add New Bookmark Form (Collapsible) -->
     <details class="add-bookmark-form">
-        <summary style="cursor: pointer; font-weight: bold;">➕ Add New Bookmark (Advanced)</summary>
+        <summary>Add new bookmark</summary>
         <form method="POST" action="{% url 'bookmark_create' id=blog.subdomain %}">
             {% csrf_token %}
-            
-            <div class="form-row">
-                <label for="title">Title *</label>
-                <input type="text" id="title" name="title" required placeholder="Enter bookmark title...">
-            </div>
-            
-            <div class="form-row">
-                <label for="url">URL *</label>
-                <input type="url" id="url" name="url" required placeholder="https://example.com">
-            </div>
-            
-            <div class="form-row">
-                <label for="description">Description</label>
-                <textarea id="description" name="description" placeholder="Add description (optional)..."></textarea>
-            </div>
-            
-            <div class="form-row">
-                <label for="tags">Tags (comma-separated)</label>
-                <input type="text" id="tags" name="tags" placeholder="work, tech, reference...">
-            </div>
-            
-            <div class="form-row checkbox-row">
-                <input type="checkbox" id="is_public" name="is_public" checked>
-                <label for="is_public">Make this bookmark public</label>
-            </div>
-            
-            <div class="form-actions">
-                <button type="submit" class="btn-primary">Create Bookmark</button>
-            </div>
+            <input type="text" name="title" required placeholder="Title">
+            <input type="url" name="url" required placeholder="URL">
+            <textarea name="description" placeholder="Description (optional)" rows="2"></textarea>
+            <input type="text" name="tags" placeholder="Tags (comma-separated)">
+            <label><input type="checkbox" name="is_public" checked> Make public</label>
+            <button type="submit">Create</button>
         </form>
     </details>
     
-    <!-- Filters & Search -->
     <div class="bookmark-filters">
-        <label>Filter by:</label>
+        <span>Filter:</span>
         <select onchange="window.location.href='?visibility=' + this.value + '&search={{ search_query }}&sort={{ sort_by }}'">
             <option value="all" {% if visibility_filter == 'all' %}selected{% endif %}>All</option>
-            <option value="public" {% if visibility_filter == 'public' %}selected{% endif %}>Public Only</option>
-            <option value="private" {% if visibility_filter == 'private' %}selected{% endif %}>Private Only</option>
+            <option value="public" {% if visibility_filter == 'public' %}selected{% endif %}>Public</option>
+            <option value="private" {% if visibility_filter == 'private' %}selected{% endif %}>Private</option>
         </select>
         
-        <label>Sort by:</label>
+        <span>Sort:</span>
         <select onchange="window.location.href='?visibility={{ visibility_filter }}&sort=' + this.value + '{% if search_query %}&search={{ search_query }}{% endif %}'">
-            <option value="newest" {% if sort_by == 'newest' %}selected{% endif %}>Newest First</option>
-            <option value="oldest" {% if sort_by == 'oldest' %}selected{% endif %}>Oldest First</option>
-            <option value="clicks" {% if sort_by == 'clicks' %}selected{% endif %}>Most Clicked</option>
+            <option value="newest" {% if sort_by == 'newest' %}selected{% endif %}>Newest</option>
+            <option value="oldest" {% if sort_by == 'oldest' %}selected{% endif %}>Oldest</option>
+            <option value="clicks" {% if sort_by == 'clicks' %}selected{% endif %}>Most clicked</option>
             <option value="alpha" {% if sort_by == 'alpha' %}selected{% endif %}>A-Z</option>
         </select>
         
         <form method="GET" action="" class="search-form">
             <input type="hidden" name="visibility" value="{{ visibility_filter }}">
             <input type="hidden" name="sort" value="{{ sort_by }}">
-            <input type="text" name="search" placeholder="Search bookmarks..." value="{{ search_query }}">
-            <button type="submit" class="btn-primary">🔍</button>
+            <input type="text" name="search" placeholder="Search" value="{{ search_query }}">
+            <button type="submit">Search</button>
             {% if search_query %}
-            <a href="?visibility={{ visibility_filter }}&sort={{ sort_by }}" class="btn-secondary">✕</a>
+            <a href="?visibility={{ visibility_filter }}&sort={{ sort_by }}">Clear</a>
             {% endif %}
         </form>
     </div>
     
-    <!-- Bookmark Grid -->
-    <div class="bookmark-grid">
+    <ul class="bookmark-list">
         {% if bookmarks %}
             {% for bookmark in bookmarks %}
-            <div class="bookmark-card">
-                <div class="card-header">
-                    <!-- 右上角操作按钮 -->
-                    <div class="card-actions-top-right">
-                        <button type="button" onclick="toggleEditForm('{{ bookmark.pk }}')" title="Edit">✏️</button>
-                        <form method="POST" action="{% url 'bookmark_update' id=blog.subdomain pk=bookmark.pk %}" style="display: inline;" onsubmit="return confirm('Delete this bookmark?');">
-                            {% csrf_token %}
-                            <input type="hidden" name="action" value="delete">
-                            <button type="submit" class="btn-delete" title="Delete">🗑️</button>
-                        </form>
-                    </div>
-                    
-                    <h3 class="card-title">
-                        <a href="{{ bookmark.url }}" target="_blank" rel="noopener">{{ bookmark.title }}</a>
-                    </h3>
-                    <div class="card-domain">{{ bookmark.domain }}</div>
-                    <div class="card-meta">
-                        <span class="visibility-badge visibility-{% if bookmark.is_public %}public{% else %}private{% endif %}"
-                              onclick="toggleVisibility('{{ bookmark.pk }}')"
-                              data-bookmark-id="{{ bookmark.pk }}"
-                              title="Click to toggle privacy">
-                            {% if bookmark.is_public %}🔓{% else %}🔒{% endif %}
-                        </span>
-                        <span>👆 {{ bookmark.clicks }}</span>
-                        <span>{{ bookmark.created_date|date:"M d" }}</span>
-                    </div>
-                    {% if bookmark.tag_list and bookmark.tag_list|length > 0 %}
-                    <div class="bookmark-tags">
-                        {% for tag in bookmark.tag_list|slice:":3" %}
-                            <span class="tag">{{ tag }}</span>
-                        {% endfor %}
-                        {% if bookmark.tag_list|length > 3 %}
-                            <span class="tag">+{{ bookmark.tag_list|length|add:"-3" }}</span>
-                        {% endif %}
-                    </div>
-                    {% endif %}
+            <li class="bookmark-item">
+                <span class="index-num">{{ forloop.counter|add:posts_from }}</span>
+                <div class="title">
+                    <a href="{{ bookmark.url }}" target="_blank" rel="noopener">{{ bookmark.title }}</a>
+                    <small style="color: grey;">{{ bookmark.domain }}</small>
+                </div>
+                <span class="meta">
+                    {% if bookmark.is_public %}🔓{% else %}🔒{% endif %}
+                    {{ bookmark.clicks }} clicks
+                    {{ bookmark.created_date|date:"M d" }}
+                </span>
+                <div class="actions">
+                    <button onclick="toggleEditForm('{{ bookmark.pk }}')" title="Edit">Edit</button>
+                    <form method="POST" action="{% url 'bookmark_update' id=blog.subdomain pk=bookmark.pk %}" style="display: inline;" onsubmit="return confirm('Delete?');">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="delete">
+                        <button type="submit" class="delete" title="Delete">Delete</button>
+                    </form>
                 </div>
                 
-                <!-- Edit Form (Hidden by default) - 保持在卡片内部，但卡片会扩展高度 -->
-                <div id="edit-form-{{ bookmark.pk }}" class="bookmark-edit-form" style="display: none; margin-top: 10px;">
+                <div id="edit-form-{{ bookmark.pk }}" class="bookmark-edit-form" style="display: none; width: 100%;">
                     <form method="POST" action="{% url 'bookmark_update' id=blog.subdomain pk=bookmark.pk %}">
                         {% csrf_token %}
                         <input type="hidden" name="action" value="update">
-                        
-                        <div class="form-row">
-                            <label for="title-{{ bookmark.pk }}">Title</label>
-                            <input type="text" id="title-{{ bookmark.pk }}" name="title" value="{{ bookmark.title }}" required>
-                        </div>
-                        
-                        <div class="form-row">
-                            <label for="url-{{ bookmark.pk }}">URL</label>
-                            <input type="url" id="url-{{ bookmark.pk }}" name="url" value="{{ bookmark.url }}" required>
-                        </div>
-                        
-                        <div class="form-row">
-                            <label for="tags-{{ bookmark.pk }}">Tags (comma-separated)</label>
-                            <input type="text" id="tags-{{ bookmark.pk }}" name="tags" 
-                                   value="{% if bookmark.tag_list %}{{ bookmark.tag_list|join:', ' }}{% endif %}">
-                        </div>
-                        
-                        <div class="form-row checkbox-row">
-                            <input type="checkbox" id="is_public-{{ bookmark.pk }}" name="is_public" {% if bookmark.is_public %}checked{% endif %}>
-                            <label for="is_public-{{ bookmark.pk }}">Make this bookmark public</label>
-                        </div>
-                        
-                        <div class="form-actions">
-                            <button type="submit" class="btn-primary">💾 Save</button>
-                            <button type="button" onclick="toggleEditForm('{{ bookmark.pk }}')" class="btn-secondary">Cancel</button>
-                        </div>
+                        <input type="text" name="title" value="{{ bookmark.title }}" required>
+                        <input type="url" name="url" value="{{ bookmark.url }}" required>
+                        <input type="text" name="tags" value="{% if bookmark.tag_list %}{{ bookmark.tag_list|join:', ' }}{% endif %}" placeholder="Tags">
+                        <label><input type="checkbox" name="is_public" {% if bookmark.is_public %}checked{% endif %}> Public</label>
+                        <button type="submit">Save</button>
+                        <button type="button" onclick="toggleEditForm('{{ bookmark.pk }}')">Cancel</button>
                     </form>
                 </div>
-            </div>
+            </li>
             {% endfor %}
         {% else %}
-            <div class="empty-state" style="grid-column: 1 / -1;">
-                <h3>📚 No bookmarks found</h3>
-                <p>Add your first bookmark above to get started!</p>
-            </div>
+        <li class="empty-state">
+            No bookmarks found
+        </li>
         {% endif %}
-    </div>
+    </ul>
     
-    <!-- Pagination -->
     {% if total_pages > 1 %}
-    <div class="pagination-info">
-        Page {{ page }} of {{ total_pages }} ({{ total_items }} items)
-    </div>
     <div class="pagination">
         {% if page > 1 %}
             <a href="?page=1&visibility={{ visibility_filter }}&sort={{ sort_by }}{% if search_query %}&search={{ search_query }}{% endif %}">« First</a>
             <a href="?page={{ page|add:"-1" }}&visibility={{ visibility_filter }}&sort={{ sort_by }}{% if search_query %}&search={{ search_query }}{% endif %}">‹ Prev</a>
-        {% else %}
-            <span class="disabled">« First</span>
-            <span class="disabled">‹ Prev</span>
         {% endif %}
         
         {% for p in paginator_range %}
             {% if p == '...' %}
-                <span class="disabled">...</span>
+                <span class="current">...</span>
             {% elif p == page %}
                 <span class="current">{{ p }}</span>
             {% else %}
@@ -785,42 +352,17 @@
         {% if page < total_pages %}
             <a href="?page={{ page|add:"1" }}&visibility={{ visibility_filter }}&sort={{ sort_by }}{% if search_query %}&search={{ search_query }}{% endif %}">Next ›</a>
             <a href="?page={{ total_pages }}&visibility={{ visibility_filter }}&sort={{ sort_by }}{% if search_query %}&search={{ search_query }}{% endif %}">Last »</a>
-        {% else %}
-            <span class="disabled">Next ›</span>
-            <span class="disabled">Last »</span>
         {% endif %}
     </div>
     {% endif %}
 </div>
 
 <script>
-// 简洁的编辑表单切换
 function toggleEditForm(bookmarkId) {
     const form = document.getElementById('edit-form-' + bookmarkId);
-    
-    if (form) {
-        // 找到对应的卡片
-        const card = form.closest('.bookmark-card');
-        
-        const currentDisplay = form.style.display;
-        
-        if (currentDisplay === 'none') {
-            // 显示编辑表单
-            form.style.display = 'block';
-            if (card) {
-                card.classList.add('has-edit-form-open');
-            }
-        } else {
-            // 隐藏编辑表单
-            form.style.display = 'none';
-            if (card) {
-                card.classList.remove('has-edit-form-open');
-            }
-        }
-    }
+    form.style.display = form.style.display === 'none' ? 'block' : 'none';
 }
 
-// URL标题自动检测
 document.getElementById('quick-url')?.addEventListener('blur', function() {
     const url = this.value.trim();
     const titleInput = document.getElementById('quick-title');
@@ -830,13 +372,10 @@ document.getElementById('quick-url')?.addEventListener('blur', function() {
     try {
         const urlObj = new URL(url);
         const domain = urlObj.hostname.replace('www.', '');
-        titleInput.placeholder = 'Title: ' + domain.charAt(0).toUpperCase() + domain.slice(1);
-    } catch (e) {
-        // 无效URL，忽略
-    }
+        titleInput.placeholder = domain.charAt(0).toUpperCase() + domain.slice(1);
+    } catch (e) {}
 });
 
-// 提交时自动生成标题
 document.getElementById('quickAddForm')?.addEventListener('submit', function(e) {
     const urlInput = document.getElementById('quick-url');
     const titleInput = document.getElementById('quick-title');
@@ -846,49 +385,8 @@ document.getElementById('quickAddForm')?.addEventListener('submit', function(e) 
             const urlObj = new URL(urlInput.value.trim());
             const domain = urlObj.hostname.replace('www.', '');
             titleInput.value = domain.charAt(0).toUpperCase() + domain.slice(1);
-        } catch (e) {
-            // 后端会处理验证
-        }
+        } catch (e) {}
     }
 });
-
-// 切换书签可见性
-async function toggleVisibility(bookmarkId) {
-    const badge = document.querySelector(`[data-bookmark-id="${bookmarkId}"]`);
-    if (!badge || badge.classList.contains('loading')) return;
-
-    badge.classList.add('loading');
-    const originalText = badge.textContent;
-
-    try {
-        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value;
-        const formData = new FormData();
-        formData.append('action', 'toggle_visibility');
-
-        const response = await fetch(`/{{ blog.subdomain }}/dashboard/bookmark/${bookmarkId}/update/`, {
-            method: 'POST',
-            headers: {
-                'X-CSRFToken': csrfToken || '',
-                'X-Requested-With': 'XMLHttpRequest'
-            },
-            body: formData
-        });
-
-        const data = await response.json();
-
-        if (data.success) {
-            badge.textContent = data.label;
-            badge.classList.remove('visibility-public', 'visibility-private');
-            badge.classList.add(`visibility-${data.badge_class}`);
-        } else {
-            badge.textContent = originalText;
-        }
-    } catch (error) {
-        console.error('Error toggling visibility:', error);
-        badge.textContent = originalText;
-    } finally {
-        badge.classList.remove('loading');
-    }
-}
 </script>
 {% endblock %}
