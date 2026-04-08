@@ -292,7 +292,7 @@
         {% if bookmarks %}
             {% for bookmark in bookmarks %}
             <li class="bookmark-item">
-                <span class="index-num">{{ forloop.counter|add:posts_from }}</span>
+                <span class="index-num">{{ forloop.counter }}</span>
                 <div class="title">
                     <a href="{{ bookmark.url }}" target="_blank" rel="noopener">{{ bookmark.title }}</a>
                     <small style="color: grey;">{{ bookmark.domain }}</small>
