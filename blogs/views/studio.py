@@ -4,7 +4,7 @@ from django.forms import ValidationError
 from django.views.decorators.csrf import csrf_exempt
 from django.shortcuts import get_object_or_404, render, redirect
 from django.urls import reverse
-from django.http import HttpResponseBadRequest
+from django.http import HttpResponseBadRequest, JsonResponse
 from django.utils import timezone
 from django.utils.text import slugify
 from django.core.validators import URLValidator
@@ -1292,19 +1292,6 @@ def bookmark_update(request, id, pk):
             bookmark.url = request.POST.get('url', bookmark.url).strip()
             bookmark.description = request.POST.get('description', bookmark.description).strip()
             bookmark.is_public = request.POST.get('is_public') == 'on'
-        
-        elif action == 'toggle_visibility':
-            # 切换隐私状态
-            bookmark.is_public = not bookmark.is_public
-            bookmark.save()
-            # 返回 JSON 响应
-            from django.http import JsonResponse
-            return JsonResponse({
-                'success': True,
-                'is_public': bookmark.is_public,
-                'label': '🔓 Public' if bookmark.is_public else '🔒 Private',
-                'badge_class': 'public' if bookmark.is_public else 'private'
-            })
             
             # 验证URL
             if bookmark.url:
@@ -1316,7 +1303,6 @@ def bookmark_update(request, id, pk):
             
             # 更新标签
             tags_str = request.POST.get('tags', '')
-            import json
             tag_list = [tag.strip() for tag in tags_str.split(',') if tag.strip()] if tags_str else []
             bookmark.tags = json.dumps(tag_list)
             
@@ -1329,6 +1315,18 @@ def bookmark_update(request, id, pk):
                     pass
             
             bookmark.save()
+        
+        elif action == 'toggle_visibility':
+            # 切换隐私状态
+            bookmark.is_public = not bookmark.is_public
+            bookmark.save()
+            # 返回 JSON 响应
+            return JsonResponse({
+                'success': True,
+                'is_public': bookmark.is_public,
+                'label': '🔓 Public' if bookmark.is_public else '🔒 Private',
+                'badge_class': 'public' if bookmark.is_public else 'private'
+            })
         
         return redirect('bookmark_list', id=blog.subdomain)
     
