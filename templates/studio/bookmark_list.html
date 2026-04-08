@@ -31,6 +31,7 @@
             padding: 6px;
             border: 1px solid #ddd;
             font-size: small;
+            flex: 1;
             min-width: 120px;
         }
         
@@ -150,6 +151,21 @@
             border: 1px solid #ddd;
             font-size: small;
             margin-right: 8px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        
+        .bookmark-edit-form .form-row {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 6px;
+            align-items: center;
+        }
+        
+        .bookmark-edit-form .form-row label {
+            min-width: 50px;
+            color: grey;
+            font-size: small;
         }
         
         .bookmark-edit-form button {
@@ -315,12 +331,24 @@
                     <form method="POST" action="{% url 'bookmark_update' id=blog.subdomain pk=bookmark.pk %}">
                         {% csrf_token %}
                         <input type="hidden" name="action" value="update">
-                        <input type="text" name="title" value="{{ bookmark.title }}" required>
-                        <input type="url" name="url" value="{{ bookmark.url }}" required>
-                        <input type="text" name="tags" value="{% if bookmark.tag_list %}{{ bookmark.tag_list|join:', ' }}{% endif %}" placeholder="Tags">
-                        <label><input type="checkbox" name="is_public" {% if bookmark.is_public %}checked{% endif %}> Public</label>
-                        <button type="submit">Save</button>
-                        <button type="button" onclick="toggleEditForm('{{ bookmark.pk }}')">Cancel</button>
+                        <div class="form-row">
+                            <label>Title</label>
+                            <input type="text" name="title" value="{{ bookmark.title }}" required>
+                        </div>
+                        <div class="form-row">
+                            <label>URL</label>
+                            <input type="url" name="url" value="{{ bookmark.url }}" required>
+                        </div>
+                        <div class="form-row">
+                            <label>Tags</label>
+                            <input type="text" name="tags" value="{% if bookmark.tag_list %}{{ bookmark.tag_list|join:', ' }}{% endif %}" placeholder="comma-separated">
+                        </div>
+                        <div class="form-row">
+                            <label></label>
+                            <label><input type="checkbox" name="is_public" {% if bookmark.is_public %}checked{% endif %}> Public</label>
+                            <button type="submit">Save</button>
+                            <button type="button" onclick="toggleEditForm('{{ bookmark.pk }}')">Cancel</button>
+                        </div>
                     </form>
                 </div>
             </li>
