@@ -111,10 +111,17 @@
             border-radius: 6px;
             padding: 12px;
             border: 1px solid #eceff4;
-            height: 120px; /* 进一步降低高度 */
+            min-height: 100px; /* 最小高度，但可以扩展 */
             position: relative; /* 为右上角按钮提供定位上下文 */
-            overflow: hidden;
+            overflow: hidden; /* 恢复为hidden，编辑表单在卡片内部 */
             transition: all 0.2s;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        /* 当编辑表单显示时，卡片高度自动扩展 */
+        .bookmark-card.has-edit-form-open {
+            overflow: visible;
         }
         
         .bookmark-card:hover {
@@ -123,15 +130,17 @@
         }
         
         .card-header {
-            height: 100%;
+            flex: 1;
             overflow: hidden;
+            position: relative;
+            padding-top: 30px; /* 为右上角按钮留出空间 */
         }
         
         /* 右上角操作按钮 */
         .card-actions-top-right {
             position: absolute;
-            top: 8px;
-            right: 8px;
+            top: 12px; /* 调整到与padding-top对齐 */
+            right: 12px;
             display: flex;
             gap: 6px;
             z-index: 10;
@@ -494,6 +503,16 @@
             padding: 12px;
             background: #f9f9f9;
             border-radius: 4px;
+            border: 1px solid #ddd;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            z-index: 2;
+        }
+        
+        /* 当编辑表单显示时，卡片高度自动扩展 */
+        .bookmark-card.has-edit-form-open {
+            overflow: visible;
+            z-index: 10;
+            margin-bottom: 10px; /* 为编辑表单留出空间 */
         }
         
         /* 黑暗模式支持 */
@@ -649,7 +668,7 @@
                     {% endif %}
                 </div>
                 
-                <!-- Edit Form (Hidden by default) - 保持原样，但需要简化 -->
+                <!-- Edit Form (Hidden by default) - 保持在卡片内部，但卡片会扩展高度 -->
                 <div id="edit-form-{{ bookmark.pk }}" class="bookmark-edit-form" style="display: none; margin-top: 10px;">
                     <form method="POST" action="{% url 'bookmark_update' id=blog.subdomain pk=bookmark.pk %}">
                         {% csrf_token %}
@@ -731,8 +750,26 @@
 // 简洁的编辑表单切换
 function toggleEditForm(bookmarkId) {
     const form = document.getElementById('edit-form-' + bookmarkId);
+    
     if (form) {
-        form.style.display = form.style.display === 'none' ? 'block' : 'none';
+        // 找到对应的卡片
+        const card = form.closest('.bookmark-card');
+        
+        const currentDisplay = form.style.display;
+        
+        if (currentDisplay === 'none') {
+            // 显示编辑表单
+            form.style.display = 'block';
+            if (card) {
+                card.classList.add('has-edit-form-open');
+            }
+        } else {
+            // 隐藏编辑表单
+            form.style.display = 'none';
+            if (card) {
+                card.classList.remove('has-edit-form-open');
+            }
+        }
     }
 }
 
