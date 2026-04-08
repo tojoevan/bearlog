@@ -55,17 +55,20 @@
         }
         
         .quick-add-form-compact button {
-            padding: 8px 16px;
-            background: var(--link-color);
-            color: white;
-            border: none;
-            border-radius: 4px;
+            padding: 6px 12px;
+            background: none;
+            color: var(--link-color);
+            border: 1px solid var(--link-color);
+            border-radius: 3px;
             cursor: pointer;
             font-size: 13px;
+            text-decoration: none;
+            transition: all 0.2s;
         }
         
         .quick-add-form-compact button:hover {
-            opacity: 0.9;
+            background: var(--link-color);
+            color: white;
         }
         
         /* 过滤器和搜索 - 简化版 */
@@ -380,12 +383,52 @@
         }
         
         .btn-primary {
+            padding: 6px 12px;
+            background: none;
+            color: var(--link-color);
+            border: 1px solid var(--link-color);
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 13px;
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+        
+        .btn-primary:hover {
             background: var(--link-color);
             color: white;
         }
         
-        .btn-primary:hover {
-            opacity: 0.9;
+        /* 搜索按钮特殊样式 */
+        .search-form .btn-primary {
+            padding: 6px 12px;
+            min-width: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        /* 次要按钮样式 */
+        .btn-secondary {
+            padding: 6px 12px;
+            background: none;
+            color: #777;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 13px;
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+        
+        .btn-secondary:hover {
+            background: #f5f5f5;
+            border-color: #999;
+            color: #555;
+        }
+        
+        a.btn-secondary {
+            display: inline-block;
         }
         
         /* 快速添加区域 - 简化版 */
