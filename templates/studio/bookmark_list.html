@@ -7,113 +7,112 @@
     {% include 'styles/blog/default.css' %}
     {% include 'styles/dashboard.css' %}
     <style>
+        /* 极简风格：参考blog_list.html的设计 */
         .bookmark-container {
-            max-width: 1200px;
+            max-width: var(--width);
             margin: 0 auto;
         }
         
+        /* 统计卡片 - 简化版 */
         .bookmark-stats {
             display: flex;
-            gap: 20px;
-            margin-bottom: 20px;
+            gap: 10px;
+            margin: 20px 0;
             flex-wrap: wrap;
         }
         
         .stat-card {
-            background: #f5f5f5;
-            padding: 15px 20px;
-            border-radius: 8px;
-            min-width: 120px;
+            background: #eceff4;
+            padding: 10px;
+            border-radius: 4px;
+            min-width: 80px;
             text-align: center;
             flex: 1;
         }
         
         .stat-card .number {
-            font-size: 24px;
+            font-size: 18px;
             font-weight: bold;
-            color: #333;
+            color: var(--heading-color);
         }
         
         .stat-card .label {
-            font-size: 12px;
-            color: #666;
-            margin-top: 5px;
+            font-size: 11px;
+            color: var(--text-color);
+            margin-top: 3px;
         }
         
+        /* 过滤器和搜索 - 简化版 */
         .bookmark-filters {
             display: flex;
             gap: 10px;
-            margin-bottom: 20px;
+            margin: 20px 0;
             align-items: center;
             flex-wrap: wrap;
         }
         
         .bookmark-filters select,
         .bookmark-filters input[type="text"] {
-            padding: 8px 12px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
+            padding: 8px;
+            border: none;
+            background-color: #eceff4;
+            line-height: 1.7;
+            outline: none;
+            color: inherit;
             font-size: 14px;
         }
         
         .search-form {
             display: flex;
-            gap: 10px;
+            gap: 5px;
             flex: 1;
-            max-width: 400px;
         }
         
         .search-form input {
             flex: 1;
         }
         
+        /* 书签列表 - 极简列表风格 */
         .bookmark-list {
-            margin-top: 20px;
+            margin: 20px 0;
         }
         
         .bookmark-item {
-            background: white;
-            border: 1px solid #e0e0e0;
-            border-radius: 8px;
-            padding: 15px;
-            margin-bottom: 10px;
-            transition: all 0.2s;
-        }
-        
-        .bookmark-item:hover {
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            padding: 10px 0;
+            border-bottom: 1px solid #eceff4;
         }
         
         .bookmark-header {
             display: flex;
-            justify-content: space-between;
             align-items: flex-start;
-            margin-bottom: 10px;
+            justify-content: space-between;
+            gap: 10px;
+            flex-wrap: wrap;
         }
         
         .bookmark-title-section {
             flex: 1;
+            min-width: 200px;
         }
         
         .bookmark-title {
             font-size: 16px;
-            font-weight: 600;
-            margin: 0 0 5px 0;
+            margin: 0 0 3px 0;
             word-break: break-all;
         }
         
         .bookmark-title a {
             text-decoration: none;
-            color: #333;
+            color: var(--heading-color);
         }
         
         .bookmark-title a:hover {
-            color: #1976d2;
+            text-decoration: underline;
         }
         
         .bookmark-url {
-            color: #1976d2;
-            font-size: 14px;
+            color: var(--link-color);
+            font-size: 13px;
             text-decoration: none;
             word-break: break-all;
         }
@@ -123,42 +122,34 @@
         }
         
         .bookmark-domain {
-            color: #999;
-            font-size: 12px;
-            margin-top: 3px;
+            color: #777;
+            font-size: 11px;
+            margin-top: 2px;
         }
         
         .bookmark-meta {
             display: flex;
-            gap: 15px;
-            font-size: 12px;
-            color: #666;
+            gap: 10px;
+            font-size: 11px;
+            color: #777;
             flex-wrap: wrap;
-            margin-top: 8px;
+            margin-top: 5px;
         }
         
+        /* 简洁的可见性徽章 */
         .visibility-badge {
             display: inline-block;
-            padding: 2px 8px;
-            border-radius: 12px;
-            font-size: 11px;
-            font-weight: 600;
+            padding: 1px 6px;
             cursor: pointer;
-            transition: all 0.2s;
-        }
-        
-        .visibility-badge:hover {
-            transform: scale(1.05);
-            box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+            font-size: 10px;
+            font-weight: 600;
         }
         
         .visibility-public {
-            background: #e8f5e9;
             color: #2e7d32;
         }
         
         .visibility-private {
-            background: #fff3e0;
             color: #e65100;
         }
         
@@ -167,230 +158,224 @@
             pointer-events: none;
         }
         
-        .bookmark-stats-badge {
-            color: #666;
-        }
-        
+        /* 标签 - 简化版 */
         .bookmark-tags {
             display: flex;
-            gap: 5px;
-            margin-top: 8px;
+            gap: 4px;
+            margin-top: 5px;
             flex-wrap: wrap;
         }
         
         .tag {
-            background: #e0e0e0;
-            padding: 2px 8px;
-            border-radius: 12px;
-            font-size: 11px;
+            background: #eceff4;
+            padding: 1px 6px;
+            border-radius: 2px;
+            font-size: 10px;
             color: #555;
         }
         
+        /* 操作按钮 - 简化版 */
         .bookmark-actions {
             display: flex;
-            gap: 8px;
+            gap: 5px;
         }
         
         .bookmark-actions button {
-            padding: 6px 12px;
-            border: 1px solid #ddd;
-            background: white;
-            border-radius: 4px;
+            padding: 4px 8px;
+            border: none;
+            background: none;
             cursor: pointer;
-            font-size: 12px;
-            transition: all 0.2s;
+            font-size: 11px;
+            color: var(--link-color);
         }
         
         .bookmark-actions button:hover {
-            background: #f5f5f5;
+            text-decoration: underline;
         }
         
         .btn-delete {
             color: #f44336 !important;
-            border-color: #f44336 !important;
         }
         
         .btn-delete:hover {
-            background: #f44336 !important;
-            color: white !important;
+            color: #d32f2f !important;
         }
         
+        /* 描述 - 简化版 */
         .bookmark-description {
-            margin-top: 10px;
-            padding-top: 10px;
-            border-top: 1px solid #eee;
-            font-size: 14px;
-            color: #555;
-            line-height: 1.6;
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px dashed #eceff4;
+            font-size: 13px;
+            color: var(--text-color);
+            line-height: 1.5;
         }
         
+        /* 表单 - 使用dashboard.css的样式 */
         .add-bookmark-form {
             background: #f9f9f9;
-            padding: 20px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            border: 1px solid #e0e0e0;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
         }
         
         .form-row {
-            margin-bottom: 15px;
+            margin-bottom: 10px;
         }
         
         .form-row label {
             display: block;
-            margin-bottom: 5px;
-            font-weight: 600;
-            font-size: 14px;
+            margin-bottom: 3px;
+            font-weight: bold;
+            font-size: 13px;
         }
         
         .form-row input[type="text"],
         .form-row input[type="url"],
         .form-row textarea {
             width: 100%;
-            padding: 8px 12px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
+            padding: 8px;
+            border: none;
+            background-color: #eceff4;
+            line-height: 1.7;
+            outline: none;
+            color: inherit;
             font-size: 14px;
             box-sizing: border-box;
         }
         
         .form-row textarea {
-            min-height: 80px;
+            min-height: 60px;
             resize: vertical;
         }
         
         .checkbox-row {
             display: flex;
             align-items: center;
-            gap: 8px;
-        }
-        
-        .checkbox-row input[type="checkbox"] {
-            width: auto;
+            gap: 5px;
         }
         
         .form-actions {
             display: flex;
-            gap: 10px;
-            margin-top: 15px;
+            gap: 8px;
+            margin-top: 10px;
         }
         
         .form-actions button {
-            padding: 10px 20px;
+            padding: 8px 16px;
             border: none;
-            border-radius: 4px;
             cursor: pointer;
-            font-size: 14px;
+            font-size: 13px;
         }
         
         .btn-primary {
-            background: #2196f3;
+            background: var(--link-color);
             color: white;
         }
         
         .btn-primary:hover {
-            background: #1976d2;
+            opacity: 0.9;
         }
         
-        .btn-secondary {
-            background: #757575;
-            color: white;
-        }
-        
+        /* 快速添加区域 - 简化版 */
         .quick-add-section {
             background: #e3f2fd;
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            border: 1px solid #90caf9;
+            padding: 12px;
+            margin: 20px 0;
+            border-radius: 4px;
         }
         
         .quick-add-section h4 {
-            margin: 0 0 10px 0;
+            margin: 0 0 8px 0;
             color: #1565c0;
+            font-size: 14px;
         }
         
         .quick-add-form {
             display: flex;
-            gap: 10px;
+            gap: 8px;
             flex-wrap: wrap;
             align-items: center;
         }
         
         .quick-add-form input[type="url"] {
             flex: 2;
-            min-width: 250px;
-            padding: 10px 12px;
+            min-width: 200px;
+            padding: 8px;
             border: 1px solid #64b5f6;
+            background-color: white;
             border-radius: 4px;
-            font-size: 14px;
+            font-size: 13px;
         }
         
         .quick-add-form input[type="text"] {
             flex: 1;
-            min-width: 150px;
-            padding: 10px 12px;
+            min-width: 120px;
+            padding: 8px;
             border: 1px solid #64b5f6;
+            background-color: white;
             border-radius: 4px;
-            font-size: 14px;
+            font-size: 13px;
         }
         
         .quick-add-form button {
-            padding: 10px 20px;
+            padding: 8px 16px;
             background: #1565c0;
             color: white;
             border: none;
             border-radius: 4px;
             cursor: pointer;
-            font-size: 14px;
+            font-size: 13px;
         }
         
         .quick-add-form button:hover {
-            background: #0d47a1;
+            opacity: 0.9;
         }
         
         .quick-add-hint {
-            font-size: 12px;
+            font-size: 11px;
             color: #666;
-            margin-top: 8px;
+            margin-top: 6px;
         }
         
+        /* 空状态 - 简化版 */
         .empty-state {
             text-align: center;
-            padding: 60px 20px;
-            color: #999;
+            padding: 40px 20px;
+            color: #777;
         }
         
         .empty-state h3 {
-            margin-bottom: 10px;
+            margin-bottom: 8px;
         }
         
+        /* 分页 - 简化版 */
         .pagination {
             display: flex;
             justify-content: center;
             align-items: center;
-            gap: 5px;
-            margin: 30px 0;
+            gap: 4px;
+            margin: 20px 0;
             flex-wrap: wrap;
         }
         
         .pagination a, .pagination span {
-            padding: 8px 12px;
+            padding: 6px 10px;
             border: 1px solid #ddd;
-            border-radius: 4px;
+            border-radius: 2px;
             text-decoration: none;
-            color: #333;
-            font-size: 14px;
+            color: var(--text-color);
+            font-size: 13px;
         }
         
         .pagination a:hover {
-            background: #f5f5f5;
+            background: #eceff4;
         }
         
         .pagination .current {
-            background: #2196f3;
+            background: var(--link-color);
             color: white;
-            border-color: #2196f3;
+            border-color: var(--link-color);
         }
         
         .pagination .disabled {
@@ -400,17 +385,38 @@
         
         .pagination-info {
             text-align: center;
-            color: #666;
-            margin-bottom: 10px;
-            font-size: 14px;
+            color: #777;
+            margin-bottom: 8px;
+            font-size: 13px;
         }
         
+        /* 编辑表单 - 简化版 */
         .bookmark-edit-form {
-            margin-top: 15px;
-            padding: 15px;
+            margin-top: 10px;
+            padding: 12px;
             background: #f9f9f9;
             border-radius: 4px;
-            border: 1px solid #ddd;
+        }
+        
+        /* 黑暗模式支持 */
+        @media (prefers-color-scheme: dark) {
+            .stat-card,
+            .add-bookmark-form,
+            .quick-add-section,
+            .bookmark-edit-form {
+                background-color: #004052;
+            }
+            
+            .quick-add-form input[type="url"],
+            .quick-add-form input[type="text"] {
+                background-color: #01242e;
+                border-color: #8cc2dd;
+                color: var(--text-color);
+            }
+            
+            .pagination a:hover {
+                background: #004052;
+            }
         }
     </style>
 {% endblock %}
@@ -425,39 +431,39 @@
     <div class="bookmark-stats">
         <div class="stat-card">
             <div class="number">{{ stats.total }}</div>
-            <div class="label">Total Bookmarks</div>
+            <div class="label">Total</div>
         </div>
         <div class="stat-card">
             <div class="number">{{ stats.public }}</div>
-            <div class="label">🔓 Public</div>
+            <div class="label">Public</div>
         </div>
         <div class="stat-card">
             <div class="number">{{ stats.private }}</div>
-            <div class="label">🔒 Private</div>
+            <div class="label">Private</div>
         </div>
     </div>
     
     <!-- Quick Add Section -->
     <div class="quick-add-section">
-        <h4>⚡ Quick Add Bookmark</h4>
+        <h4>⚡ Quick Add</h4>
         <form method="POST" action="{% url 'bookmark_create' id=blog.subdomain %}" class="quick-add-form" id="quickAddForm">
             {% csrf_token %}
             <input type="url" name="url" id="quick-url" placeholder="Paste URL here..." required>
             <input type="text" name="title" id="quick-title" placeholder="Title (auto-detected)">
-            <label style="display: flex; align-items: center; gap: 5px; color: #333;">
+            <label style="display: flex; align-items: center; gap: 5px;">
                 <input type="checkbox" name="is_public" checked style="width: auto;">
                 Public
             </label>
             <button type="submit" id="quick-submit">Add</button>
         </form>
         <div class="quick-add-hint">
-            💡 Tip: Paste URL first, title will be auto-detected if possible. If not, domain will be used.
+            💡 Tip: Paste URL first, title will be auto-detected if possible.
         </div>
     </div>
     
     <!-- Add New Bookmark Form (Collapsible) -->
     <details class="add-bookmark-form">
-        <summary style="cursor: pointer; font-weight: 600; margin-bottom: 15px;">➕ Add New Bookmark (Advanced)</summary>
+        <summary style="cursor: pointer; font-weight: bold;">➕ Add New Bookmark (Advanced)</summary>
         <form method="POST" action="{% url 'bookmark_create' id=blog.subdomain %}">
             {% csrf_token %}
             
@@ -483,7 +489,7 @@
             
             <div class="form-row checkbox-row">
                 <input type="checkbox" id="is_public" name="is_public" checked>
-                <label for="is_public" style="margin: 0;">Make this bookmark public</label>
+                <label for="is_public">Make this bookmark public</label>
             </div>
             
             <div class="form-actions">
@@ -502,7 +508,7 @@
         </select>
         
         <label>Sort by:</label>
-        <select onchange="window.location.href='?visibility={{ visibility_filter }}&sort=' + this.value{% if search_query %} + '&search={{ search_query }}'{% endif %}">
+        <select onchange="window.location.href='?visibility={{ visibility_filter }}&sort=' + this.value + '{% if search_query %}&search={{ search_query }}{% endif %}'">
             <option value="newest" {% if sort_by == 'newest' %}selected{% endif %}>Newest First</option>
             <option value="oldest" {% if sort_by == 'oldest' %}selected{% endif %}>Oldest First</option>
             <option value="clicks" {% if sort_by == 'clicks' %}selected{% endif %}>Most Clicked</option>
@@ -513,9 +519,9 @@
             <input type="hidden" name="visibility" value="{{ visibility_filter }}">
             <input type="hidden" name="sort" value="{{ sort_by }}">
             <input type="text" name="search" placeholder="Search bookmarks..." value="{{ search_query }}">
-            <button type="submit" class="btn-primary" style="padding: 8px 16px;">🔍</button>
+            <button type="submit" class="btn-primary">🔍</button>
             {% if search_query %}
-            <a href="?visibility={{ visibility_filter }}&sort={{ sort_by }}" class="btn-secondary" style="padding: 8px 16px; text-decoration: none;">✕</a>
+            <a href="?visibility={{ visibility_filter }}&sort={{ sort_by }}" class="btn-secondary">✕</a>
             {% endif %}
         </form>
     </div>
@@ -534,7 +540,7 @@
                         <div class="bookmark-domain">{{ bookmark.domain }}</div>
                         <div class="bookmark-meta">
                             <span class="visibility-badge visibility-{% if bookmark.is_public %}public{% else %}private{% endif %}"
-                                  onclick="toggleVisibility({{ bookmark.pk }})"
+                                  onclick="toggleVisibility('{{ bookmark.pk }}')"
                                   data-bookmark-id="{{ bookmark.pk }}"
                                   title="Click to toggle privacy">
                                 {% if bookmark.is_public %}🔓 Public{% else %}🔒 Private{% endif %}
@@ -552,7 +558,7 @@
                     </div>
                     
                     <div class="bookmark-actions">
-                        <button type="button" onclick="toggleEditForm({{ bookmark.pk }})" title="Edit bookmark">✏️ Edit</button>
+                        <button type="button" onclick="toggleEditForm('{{ bookmark.pk }}')" title="Edit bookmark">✏️ Edit</button>
                         <form method="POST" action="{% url 'bookmark_update' id=blog.subdomain pk=bookmark.pk %}" style="display: inline;" onsubmit="return confirm('Delete this bookmark?');">
                             {% csrf_token %}
                             <input type="hidden" name="action" value="delete">
@@ -596,7 +602,7 @@
                         
                         <div class="form-row checkbox-row">
                             <input type="checkbox" id="is_public-{{ bookmark.pk }}" name="is_public" {% if bookmark.is_public %}checked{% endif %}>
-                            <label for="is_public-{{ bookmark.pk }}" style="margin: 0;">Make this bookmark public</label>
+                            <label for="is_public-{{ bookmark.pk }}">Make this bookmark public</label>
                         </div>
                         
                         <div class="form-actions">
@@ -651,60 +657,50 @@
 </div>
 
 <script>
+// 简洁的编辑表单切换
 function toggleEditForm(bookmarkId) {
     const form = document.getElementById('edit-form-' + bookmarkId);
     if (form) {
-        if (form.style.display === 'none') {
-            form.style.display = 'block';
-        } else {
-            form.style.display = 'none';
-        }
+        form.style.display = form.style.display === 'none' ? 'block' : 'none';
     }
 }
 
-// Auto-detect title from URL - show hint
-document.getElementById('quick-url').addEventListener('blur', async function() {
+// URL标题自动检测
+document.getElementById('quick-url')?.addEventListener('blur', function() {
     const url = this.value.trim();
     const titleInput = document.getElementById('quick-title');
     
     if (!url || titleInput.value) return;
     
-    // If URL has no title, try to extract domain
     try {
         const urlObj = new URL(url);
         const domain = urlObj.hostname.replace('www.', '');
-        titleInput.placeholder = 'Title will be: ' + domain.charAt(0).toUpperCase() + domain.slice(1);
+        titleInput.placeholder = 'Title: ' + domain.charAt(0).toUpperCase() + domain.slice(1);
     } catch (e) {
-        // Invalid URL, ignore
+        // 无效URL，忽略
     }
 });
 
-// Auto-generate title from URL on submit if empty
-document.getElementById('quickAddForm').addEventListener('submit', function(e) {
+// 提交时自动生成标题
+document.getElementById('quickAddForm')?.addEventListener('submit', function(e) {
     const urlInput = document.getElementById('quick-url');
     const titleInput = document.getElementById('quick-title');
 
     if (urlInput.value.trim() && !titleInput.value.trim()) {
-        // Extract domain as title if empty
         try {
             const urlObj = new URL(urlInput.value.trim());
             const domain = urlObj.hostname.replace('www.', '');
-            // Capitalize first letter
             titleInput.value = domain.charAt(0).toUpperCase() + domain.slice(1);
         } catch (e) {
-            // If URL is invalid, just submit with empty title
-            // Backend will handle validation
+            // 后端会处理验证
         }
     }
 });
 
-// Toggle bookmark visibility (Public/Private)
+// 切换书签可见性
 async function toggleVisibility(bookmarkId) {
     const badge = document.querySelector(`[data-bookmark-id="${bookmarkId}"]`);
-    if (!badge) return;
-
-    // Prevent double-clicks
-    if (badge.classList.contains('loading')) return;
+    if (!badge || badge.classList.contains('loading')) return;
 
     badge.classList.add('loading');
     const originalText = badge.textContent;
@@ -726,7 +722,6 @@ async function toggleVisibility(bookmarkId) {
         const data = await response.json();
 
         if (data.success) {
-            // Update badge appearance
             badge.textContent = data.label;
             badge.classList.remove('visibility-public', 'visibility-private');
             badge.classList.add(`visibility-${data.badge_class}`);
