@@ -111,10 +111,8 @@
             border-radius: 6px;
             padding: 12px;
             border: 1px solid #eceff4;
-            height: 130px; /* 限制为两行高度 */
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
+            height: 120px; /* 进一步降低高度 */
+            position: relative; /* 为右上角按钮提供定位上下文 */
             overflow: hidden;
             transition: all 0.2s;
         }
@@ -125,8 +123,43 @@
         }
         
         .card-header {
-            flex: 1;
+            height: 100%;
             overflow: hidden;
+        }
+        
+        /* 右上角操作按钮 */
+        .card-actions-top-right {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            display: flex;
+            gap: 6px;
+            z-index: 10;
+        }
+        
+        .card-actions-top-right button {
+            padding: 4px 8px;
+            border: none;
+            background: rgba(255, 255, 255, 0.9);
+            cursor: pointer;
+            font-size: 12px;
+            color: var(--link-color);
+            border-radius: 3px;
+            opacity: 0.8;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        .card-actions-top-right button:hover {
+            opacity: 1;
+            background: white;
+        }
+        
+        .card-actions-top-right .btn-delete {
+            color: #f44336 !important;
+        }
+        
+        .card-actions-top-right .btn-delete:hover {
+            color: #d32f2f !important;
         }
         
         .card-title {
@@ -139,6 +172,7 @@
             -webkit-line-clamp: 2;
             -webkit-box-orient: vertical;
             overflow: hidden;
+            padding-right: 60px; /* 为右上角按钮留出空间 */
         }
         
         .card-title a {
@@ -154,26 +188,22 @@
         .card-domain {
             font-size: 11px;
             color: #777;
-            margin-bottom: 6px;
+            margin-bottom: 4px;
             word-break: break-word;
         }
         
         .card-meta {
             display: flex;
-            gap: 8px;
+            gap: 6px;
             font-size: 10px;
             color: #777;
             flex-wrap: wrap;
-            margin-top: 8px;
+            margin-top: 6px;
         }
         
+        /* 移除底部区域，已经将按钮移到右上角 */
         .card-footer {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-top: 8px;
-            padding-top: 8px;
-            border-top: 1px solid #eceff4;
+            display: none;
         }
         
         /* 简洁的可见性徽章 */
@@ -583,6 +613,16 @@
             {% for bookmark in bookmarks %}
             <div class="bookmark-card">
                 <div class="card-header">
+                    <!-- 右上角操作按钮 -->
+                    <div class="card-actions-top-right">
+                        <button type="button" onclick="toggleEditForm('{{ bookmark.pk }}')" title="Edit">✏️</button>
+                        <form method="POST" action="{% url 'bookmark_update' id=blog.subdomain pk=bookmark.pk %}" style="display: inline;" onsubmit="return confirm('Delete this bookmark?');">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="delete">
+                            <button type="submit" class="btn-delete" title="Delete">🗑️</button>
+                        </form>
+                    </div>
+                    
                     <h3 class="card-title">
                         <a href="{{ bookmark.url }}" target="_blank" rel="noopener">{{ bookmark.title }}</a>
                     </h3>
@@ -607,17 +647,6 @@
                         {% endif %}
                     </div>
                     {% endif %}
-                </div>
-                
-                <div class="card-footer">
-                    <div class="bookmark-actions-compact">
-                        <button type="button" onclick="toggleEditForm('{{ bookmark.pk }}')" title="Edit">✏️</button>
-                        <form method="POST" action="{% url 'bookmark_update' id=blog.subdomain pk=bookmark.pk %}" style="display: inline;" onsubmit="return confirm('Delete this bookmark?');">
-                            {% csrf_token %}
-                            <input type="hidden" name="action" value="delete">
-                            <button type="submit" class="btn-delete" title="Delete">🗑️</button>
-                        </form>
-                    </div>
                 </div>
                 
                 <!-- Edit Form (Hidden by default) - 保持原样，但需要简化 -->
