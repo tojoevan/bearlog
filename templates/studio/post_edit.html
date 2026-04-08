@@ -127,8 +127,10 @@ New post | Bear Blog
         <b>tags:</b> {{ post.tags|join:", " }}{% endif %}{% if post.is_page %}<br>
         <b>is_page:</b> {{ post.is_page|lower }}{% endif %}{% if post.class_name %}<br>
         <b>class_name:</b> {{ post.class_name }}{% endif %}{% if not post.make_discoverable %}<br>
-        <b>make_discoverable:</b> {{ post.make_discoverable|lower }}<br>{% endif %}{% elif template_header %}
-        <b>{{ template_header|linebreaksbr }}</b>{% if is_page %}<b>is_page:</b> true{% endif %}{% else %}<b>title:</b> <br><b>link:</b> <br><b>tags:</b> <br>{% if is_page %}<b>is_page:</b> true{% endif %}{% endif %}
+        <b>make_discoverable:</b> {{ post.make_discoverable|lower }}<br>{% endif %}
+        {% elif template_header %}
+        <b>{{ template_header|linebreaksbr }}</b>{% if is_page %}<b>is_page:</b> true{% endif %}
+        {% else %}<b>title:</b> <br><b>link:</b> <br><b>tags:</b> <br>{% if is_page %}<b>is_page:</b> true{% endif %}{% endif %}
     </div>
 
     <input type="hidden" id="hidden_header_content" name="header_content">
